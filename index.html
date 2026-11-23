@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CIMMYT Asia Procurement Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --navy:#0c3554;--ink:#12324c;--muted:#6b8298;--line:#d7e6ee;--bg:#eef5f8;--card:#fff;
+  --teal:#0aa3b8;--cyan:#0798d4;--green:#4fa82a;--orange:#f59b22;--red:#e5484d;--grey:#8a9bab;
+  --shadow:0 8px 24px rgba(12,53,84,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"DM Sans",Arial,sans-serif;font-size:14px}
+button,input,select{font-family:inherit}
+.app{display:flex;min-height:100vh}
+.app.hidden{display:none}
+.password-overlay{position:fixed;inset:0;background:rgba(8,29,39,.72);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.password-overlay.hidden{display:none}
+.password-modal{width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px rgba(7,28,39,.3);padding:24px 22px 20px}
+.password-modal h2{margin:8px 0 14px;color:var(--navy);font-size:28px;letter-spacing:-.04em}
+.login-label{display:block;margin-top:12px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.password-field{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;margin-top:6px;outline:none}
+.password-field:focus{border-color:#0aa3b8;box-shadow:0 0 0 3px rgba(10,163,184,.12)}
+.password-actions{display:flex;justify-content:flex-end;margin-top:16px}
+.password-error{min-height:18px;margin-top:10px;color:#c33842;font-size:12px;font-weight:700}
+.sidebar{width:232px;flex:none;background:linear-gradient(180deg,#0a3344 0%,#0c3d4d 55%,#0a2f3e 100%);color:#d7e8ee;position:sticky;top:0;height:100vh;padding:22px 14px 18px;display:flex;flex-direction:column;z-index:20}
+.brand{text-align:center;margin:2px 0 26px}
+.logo{display:block;width:min(190px,100%);height:auto;margin:0 auto 8px}
+.brand small{display:block;margin-top:4px;letter-spacing:.22em;font-size:9px;color:#8bb8c2}
+.wheat{margin:auto 0 0 16px;opacity:.16;flex:none}
+.nav{display:grid;gap:6px}
+.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;font-size:13.5px;font-weight:600;color:#cfe0e6}
+.nav button svg{width:19px;height:19px;flex:none}
+.nav button:hover{background:rgba(255,255,255,.06)}
+.nav button.active{background:linear-gradient(90deg,#0e8696,#0e7d8d);color:#fff;box-shadow:inset 3px 0 0 #35d6e6}
+.nav button:focus-visible{outline:2px solid #7fe0ee;outline-offset:2px}
+.nav .count{margin-left:auto;background:var(--red);color:#fff;border-radius:99px;font-size:10.5px;padding:1px 7px;font-weight:700}
+.side-foot{margin-top:10px;font-size:11px;color:#8bb8c2;line-height:1.5}
+.main{flex:1;min-width:0;padding:22px 26px 40px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.eyebrow{color:#0a8ea3;font-weight:800;letter-spacing:.16em;text-transform:uppercase;font-size:10px}
+h1{margin:6px 0 4px;color:var(--navy);font-size:28px;letter-spacing:-.03em}
+.sub{color:var(--muted);font-size:13px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.tools label,.filters label{display:grid;gap:3px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+input[type=date],input[type=text],input[type=number],input[type=search],select{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 10px;font-size:13px;min-width:0}
+input:focus,select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,163,184,.14)}
+.btn{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:9px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--teal)}
+.btn.primary{background:#0e7d8d;border-color:#0e7d8d;color:#fff}
+.btn.primary:hover{background:#0b6b79}
+.btn:disabled{opacity:.55;cursor:wait}
+.btn.small{padding:5px 9px;font-size:12px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:16px 0 0}
+.filters select{max-width:210px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin-top:16px}
+.kpi{all:unset;box-sizing:border-box;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);border-left:4px solid var(--teal);display:block}
+.kpi:hover{border-color:var(--teal)}
+.kpi:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.kpi span{display:block;color:var(--muted);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.kpi b{display:block;font-size:25px;color:var(--navy);margin:5px 0 2px;letter-spacing:-.02em}
+.kpi small{color:var(--muted);font-size:11.5px}
+.kpi.orange{border-left-color:var(--orange)}.kpi.red{border-left-color:var(--red)}.kpi.green{border-left-color:var(--green)}.kpi.navy{border-left-color:var(--navy)}
+.kpi.red b{color:#c2333a}.kpi.orange b{color:#b76a05}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-top:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow);min-width:0}
+.panel.wide{grid-column:1/-1}
+.panel h2{margin:0;font-size:14.5px;color:var(--navy)}
+.panel .hint{color:var(--muted);font-size:12px;margin:3px 0 10px}
+.panel-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.cv{position:relative;height:270px}
+.cv.tall{height:330px}
+.tablewrap{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:8px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#f6fafc;position:sticky;top:0}
+th.sortable{cursor:pointer}th.sortable:hover{color:var(--navy)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr.click{cursor:pointer}tbody tr.click:hover{background:#f3f9fb}
+td.wrap{white-space:normal;min-width:200px;max-width:340px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;background:#e8eff3;color:#3d5a70}
+.pill.green{background:#e3f4d9;color:#2f6d14}.pill.orange{background:#fdeed5;color:#96560a}.pill.red{background:#fde0e1;color:#a3252b}.pill.blue{background:#dcf0fa;color:#0a618a}.pill.grey{background:#e8eff3;color:#566b7c}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.empty{padding:34px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--navy);font-size:15px;margin-bottom:5px}
+.alerts{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.alerts li{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border-radius:10px;background:#f6fafc;border:1px solid var(--line);font-size:13px}
+.alerts li i{width:10px;height:10px;border-radius:50%;margin-top:4px;flex:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.seg button{all:unset;cursor:pointer;padding:8px 16px;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button.on{background:#0e7d8d;color:#fff}
+.stage{display:inline-block;min-width:104px;padding:4px 8px;border-radius:8px;font-size:11.5px;line-height:1.35;border:1px solid transparent}
+.stage b{display:block;font-size:11.5px}
+.stage.done{background:#e3f4d9;color:#2f6d14}.stage.upcoming{background:#eef3f6;color:#566b7c}.stage.due{background:#fdeed5;color:#96560a;border-color:#f5c887}.stage.overdue{background:#fde0e1;color:#a3252b;border-color:#f1a7ab}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
+dialog{border:none;border-radius:16px;padding:20px 22px;width:min(1080px,94vw);max-height:88vh;box-shadow:0 24px 60px rgba(7,28,39,.3);color:var(--ink)}
+dialog::backdrop{background:rgba(8,29,39,.6)}
+dialog h2{margin:0 0 4px;color:var(--navy);font-size:19px}
+.dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px 18px;margin-top:12px}
+.dl div{border-bottom:1px solid var(--line);padding:5px 0}
+.dl span{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.loader{min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);font-size:15px;font-weight:600}
+.spinner{width:46px;height:46px;border-radius:50%;border:4px solid var(--line);border-top-color:#0e7d8d;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.4s}}
+.toast{position:fixed;right:20px;bottom:20px;background:#0c3554;color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;max-width:420px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:99}
+.toast.show{opacity:1;transform:none}
+@media (max-width:900px){
+  .app{display:block}
+  .app.hidden{display:none}
+  .sidebar{position:static;width:auto;height:auto;padding:12px 12px 10px}
+  .brand{margin:0 0 10px;display:flex;align-items:center;gap:10px;text-align:left}.logo{width:150px;margin:0}.brand small{margin:0}.wheat{display:none}
+  .nav{display:flex;overflow-x:auto;gap:6px;padding-bottom:4px}
+  .nav button{white-space:nowrap;padding:8px 12px}
+  .side-foot{display:none}
+  .main{padding:16px 16px 32px}
+  h1{font-size:23px}
+}
+</style>
+</head>
+<body>
+<div id="passwordOverlay" class="password-overlay" aria-live="polite">
+  <div class="password-modal">
+    <div class="eyebrow">CIMMYT account</div>
+    <h2>Sign in</h2>
+    <form id="passwordForm" novalidate>
+      <label class="login-label" for="usernameInput">User name</label>
+      <input id="usernameInput" class="password-field" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus>
+      <label class="login-label" for="passwordInput">Password</label>
+      <input id="passwordInput" class="password-field" type="password" placeholder="Password" autocomplete="current-password">
+      <div class="password-actions"><button type="submit" class="btn primary" id="signInBtn">Sign in</button></div>
+      <div id="passwordError" class="password-error" role="alert"></div>
+    </form>
+  </div>
+</div>
+<div class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="logo" role="img" aria-label="CIMMYT" version="1.1" id="Layer_1" x="0" y="0" viewBox="0 0 523 62.3" style="enable-background:new 0 0 523 62.3" xml:space="preserve" xmlns="http://www.w3.org/2000/svg"><style type="text/css" id="style2">.st1{fill:#487629}.st2{fill:#77bc43}</style><g id="g6"><path transform="matrix(.00431 -1 1 .00431 401.018 462.509)" id="rect4" style="fill:#231f20" d="M405.7 29.3h54.2v1.1h-54.2z"></path></g><g id="g32"><path class="st1" d="M495.2 20.1c-.5-.7-1.7-1.7-2.4-2.4-.9-1.1-1.2-1.3-1.2-3V7.6c0-1.1-1.6-.9-1.6 0 0 0-.1 12.5 0 13.6s-.4 1.8 1.3 3c1.8 1.2 4.6 2 4.6 2s0-2.8.1-3.8c0-1.1-.3-1.6-.8-2.3m-.8 3.8c-2.6-1.1-3-.9-2.8-4.9 3.1 2 3 2.7 2.8 4.9" id="path8"></path><path class="st1" d="M497.4 22.3v3.8s2.8-.8 4.6-2c1.7-1.1 1.2-1.8 1.3-2.9s0-13.6 0-13.6c0-.9-1.6-1.1-1.6 0V15c0 1.7-.3 2-1.3 2.9-.7.7-1.8 1.7-2.4 2.4-.3.5-.6 1-.6 2m4.4-3.1c.3 3.9-.1 3.8-2.8 4.9-.1-2.3-.4-3.1 2.8-4.9" id="path10"></path><path class="st1" d="M498.8 12.9c-.9-1.6 0 0-1.3-2.1V2.9c0-1.2-1.6-1.2-1.6 0v7.9s-1.3 2.2-1.7 3.2c-.4.9-.9 2 .4 3.4.1.1.3.4 2.1 2.1l1.6-1.6c2.2-2.1 1.4-3.5.5-5m-2 4.4c-3-1.6-.8-3.8 0-5.3l.1.1c2.1 3.5 1.6 4.1-.1 5.2" id="path12"></path><path class="st1" d="M495.7 29.7c-.1-1.6-.7-2.9-3.8-4.1-2.6-1.1-6.5-1.3-9.2-1.7-2.8-.4-7.2-1.2-9.6-3.4 1.7 5.7 5.9 8 10.3 9.1 4.9 1.1 9.3 1.6 12 3.4l.3.1c-.1-1.3.2-1.8 0-3.4m-1.3.8c-2.4-.9-3.9-1.2-8.2-2-4.2-.9-6.7-1.7-9.1-4.1 3.7 1.4 9.6 2 12.8 2.6 3.3.7 4.1 1.7 4.5 3.5z" id="path14"></path><path class="st1" d="m497.4 33.1.3-.1c2.6-1.8 7.1-2.2 12.1-3.3 4.3-.9 8.7-3.3 10.4-9-2.2 2.1-6.8 2.9-9.6 3.3-2.8.4-6.6.7-9.2 1.6-3.2 1.2-3.8 2.5-3.8 4.1-.2 1.6 0 2.1-.2 3.4m1.5-2.6c.4-2 1.2-2.8 4.5-3.4 3.2-.7 9.1-1.2 12.8-2.5-2.2 2.4-4.9 3.2-9.1 3.9-4.3 1-5.8 1.1-8.2 2z" id="path16"></path><path class="st1" d="M495.6 37c0-3-1.7-3.9-4.3-4.6-2.6-.7-6.2-1.2-9.3-2.1-3-.9-4.7-1.4-6.8-3.8.4 4.5 3.6 7.6 7.4 9 3.8 1.3 3.6 1.1 5.7 1.6s2.4 1.3 2.4 2.5v2.6h5.1c-.1-5.9-.3-2.1-.2-5.2m-1.6 3.5h-2.1s0-.9-.1-2.4c-.1-2-2.5-2.1-6.2-3.2-2.6-.8-5.9-1.7-7.4-4.2.9.4 2.8 1.2 5.8 1.8 2.9.7 4.5.9 7.1 1.4 2.5.5 3 2.1 2.9 3.7v2.9z" id="path18"></path><path class="st1" d="M497.6 42.2h5.1v-2.6c0-1.3.4-2 2.5-2.5s1.8-.3 5.7-1.6c3.8-1.3 7-4.5 7.4-8.8-2.1 2.2-3.8 2.9-7 3.7-3 .9-6.7 1.3-9.3 2.1-2.6.7-4.3 1.6-4.3 4.6-.1 3-.3-.8-.1 5.1m1.4-4.5c0-1.7.5-3.2 3-3.7 2.6-.5 4.2-.9 7.1-1.4 3-.7 4.9-1.3 5.8-1.7-1.4 2.6-4.9 3.4-7.5 4.2-3.8 1.1-6.1 1.2-6.2 3.2-.1 1.4-.1 2.4-.1 2.4H499v-3z" id="path20"></path><path class="st1" d="M485.1 56.4c-.7.1-1.3.3-2.1.3-2.9 0-4.9-1.4-4.9-4.5 0-3 1.8-4.7 5-4.7.5 0 1.3.1 2.1.4l-.1 1.6c-.7-.4-1.3-.5-2-.5-1.8 0-3 1.4-3 3.3 0 1.8 1.2 3.2 3 3.2.7 0 1.6-.1 2-.4v1.3z" id="path22"></path><path class="st1" d="M493.5 49.3c-.7-.3-1.6-.5-2.4-.5-2.1 0-3.3 1.4-3.3 3.3 0 1.8 1.2 3.2 3 3.2.5 0 .9 0 1.2-.1v-2.4h-2v-1.4h3.7v4.9c-.9.3-2 .4-2.9.4-2.9 0-4.9-1.4-4.9-4.5s1.8-4.7 5-4.7c1.1 0 1.8.1 2.6.4v1.4z" id="path24"></path><path transform="matrix(.00482 -1 1 .00482 442.115 548.322)" class="st1" id="rect26" d="M492 51.1h9v1.8h-9z"></path><path class="st1" d="M504.2 53.1h-2.6l1.3-3.7 1.3 3.7zm-5.8 3.5h1.8l.8-2.1h3.7l.8 2.1h2l-3.6-9h-2l-3.5 9z" id="path28"></path><path class="st1" d="M510.3 49.1h.5c.9 0 2 .1 1.8 1.2 0 1.2-1.1 1.3-2 1.2h-.5l.2-2.4zm-1.8 7.6h1.8V53h.5c.8 0 1.1.3 1.3.9l1.1 2.8h2l-1.4-3.6c-.1-.4-.4-.9-.9-.9 1.2-.1 1.8-1.1 1.8-2.1 0-2.5-2.2-2.5-4.2-2.5h-2v9.1z" id="path30"></path></g><g id="g380"><g id="g366"><g id="g364"><path class="st2" d="M85.7 54.1c-4.1 2.4-8.8 3.2-13.6 3.2-6.1 0-12.2-1.3-16.7-5.4-4.6-3.9-6.6-9.6-6.6-15.5 0-13 10.9-19.6 23.6-19.6 4.9 0 8.7.7 13.4 2.1.5.1 1.1.3.9 1.2-.4 1.8-.8 6.2-.9 8.8h-2.2c0-1.7-.1-3.3-.4-4.9-2.8-3-6.6-4-10.6-4-4.3 0-8.6 1.6-11.5 4.7-2.6 2.9-3.4 7.1-3.4 10.9 0 4.7 1.2 9.3 4.6 12.9 3.6 3.7 7.5 5 12.6 5 3.4 0 8.3-1.2 11.2-2.9l.7.7-1.1 2.8" id="path34"></path><path class="st2" d="M100.8 24.3c0-4.1-.3-4.6-5-4.5v-2.4c3.9.1 6.8.3 9.2.3 2.4 0 5.3-.1 9.1-.3v2.4c-4.7-.1-5 .3-5 4.3v25.5c0 4.1.3 4.6 5 4.3v2.6c-3.9-.1-6.8-.3-9.1-.3-2.2 0-5.3.1-9.2.3v-2.4c4.7.1 5-.4 5-4.5V24.3" id="path36"></path><path class="st2" d="m165 25.2-6.3 12.4-8.7 18-.7 1.3h-2c-.1-.5-1.3-3.2-2.1-4.7l-13.6-27.1v24.6c0 4.1.3 4.6 5 4.3v2.6c-2.8-.1-5-.3-6.6-.3s-3.9.1-6.8.3v-2.5c4.7.1 5-.3 5-4.3V24.3c0-4.1-.3-4.6-5-4.3v-2.5c3.4.1 5.7.3 7.4.3s3.8-.1 6.7-.3c1.1 2.5 3 6.8 4.3 9.3l9.3 18.8c.9-1.6 1.7-3.3 2.6-5 4.3-9 9.5-19.5 11.1-23 2.9.1 5 .3 6.7.3s3.9-.1 6.8-.3v2.5c-4.7-.1-5 .3-5 4.3V50c0 4.1.3 4.6 5 4.3v2.4c-3.9-.1-6.8-.3-9.1-.3-2.2 0-5.3.1-9.2.3v-2.4c4.7.1 4.9-.4 5-4.5l.2-24.6" id="path38"></path><path class="st2" d="m228.8 25.2-6.3 12.4-8.7 18-.7 1.3h-2c-.1-.5-1.3-3.2-2.1-4.7l-13.6-27.1v24.6c0 4.1.3 4.6 5 4.3v2.6c-2.8-.1-5-.3-6.6-.3-1.7 0-3.9.1-6.8.3v-2.5c4.7.1 5-.3 5-4.3V24.3c0-4.1-.3-4.6-5-4.3v-2.5c3.4.1 5.7.3 7.4.3s3.9-.1 6.7-.3c1.1 2.5 3 6.8 4.3 9.3l9.3 18.8c.9-1.6 1.7-3.3 2.6-5 4.3-9 9.5-19.5 11.1-23 2.9.1 5 .3 6.7.3s3.9-.1 6.8-.3v2.5c-4.7-.1-5 .3-5 4.3V50c0 4.1.3 4.6 5 4.3v2.4c-3.9-.1-6.8-.3-9.1-.3-2.2 0-5.3.1-9.2.3v-2.4c4.7.1 4.9-.4 5-4.5l.2-24.6" id="path40"></path><path class="st2" d="M272.1 36.2c4.6-7.4 8.8-13.7 11.1-18.3h4.5V19l-2.4 3.3-6.2 9.2-2.6 4.1-1.8 3.7c-.4.8-.4 1.7-.4 2.6v8c0 4.1.3 4.6 5 4.3v2.5c-3.9-.1-6.8-.3-9.1-.3-2.2 0-5.3.1-9.2.3v-2.4c4.7.1 5-.4 5-4.5v-7.1c0-1.2-.3-2.4-.5-3-.7-1.3-1.3-2.5-2.1-3.7l-5.9-9.3c-.9-1.2-2.1-2.8-3-3.8-1.3-1.4-3-1.8-4.6-1.8V19l9.3-2c3.3 1.7 5 4.7 6.7 7.8l6.2 11.4" id="path42"></path><path class="st2" d="M317 49.9c0 4.1.3 4.6 5 4.3v2.5c-3.9-.1-6.8-.3-9.1-.3s-5.3.1-9.2.3v-2.4c4.7.1 5-.4 5-4.5V21.3H300c-1.4.1-2 .5-2.6 1.8-.1.9-.1 2.4-.3 3.8h-2.4c.1-2.8-.3-6.5-.1-9.5 7.9.1 13.8.3 18.4.3s10.5-.1 18.6-.3c-.1 2.5-.5 6.1-.8 9.5h-2.2c0-.8 0-1.6-.1-2.4-.4-2.9.1-3.2-3-3.3h-8.3l-.2 28.7" id="path44"></path><g id="g354"><g id="g48"><path class="st2" d="M29.7 22.6c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.7.1 1.1-.3 1.4-.3.4-.7.5-1.1.4-.5 0-.8-.1-1.1-.3-.4-.1-.5-.3-.8-.4s-.4-.4-.4-.8c-.1-.4 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.1z" id="path46"></path></g><g id="g52"><path class="st2" d="M23.9 17.3c0 .4.1.8.1 1.3.1.8.3 1.2.3 1.4 0 .3 0 .4-.3.5-.1.1-.1.1-.1 0-.1 0-.3-.1-.4-.5 0-.4-.1-.9-.1-1.3v-1.2c0-.3 0-.4.1-.5 0 0 0-.1.1 0 .2.2.3.2.3.3" id="path50"></path></g><g id="g56"><path class="st2" d="M23.9 13.3v.4c0 .4 0 .9.1 1.4.1.8.3 1.2.1 1.6 0 .1-.1.1-.1.3-.1.1-.3.1-.4 0s-.3-.5-.3-.9l-.1-.7c-.1-.7 0-1.2 0-1.6 0-.3 0-.5.1-.7 0 0 .1-.1.1 0 .5-.2.5-.1.5.2" id="path54"></path></g><g id="g60"><path class="st2" d="M23.9 21c0 .4.1.8.1 1.3.1.8.3 1.2.3 1.4 0 .3 0 .4-.3.5-.1.1-.1.1-.3 0-.1 0-.3-.1-.3-.5s-.1-.8-.1-1.3v-1.2c0-.3 0-.4.1-.5h.1c.3.2.3.2.4.3" id="path58"></path></g><g id="g64"><path class="st2" d="M29.7 19.1c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.5.1.9-.3 1.4-.3.4-.7.5-1.1.4-.5 0-.8-.1-1.1-.3-.4-.1-.5-.3-.8-.4s-.4-.4-.4-.8c-.1-.5 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.1z" id="path62"></path></g><g id="g68"><path class="st2" d="M29.7 29.7c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.7.1 1.1-.3 1.4-.3.5-.7.5-1.1.5-.5 0-.8-.1-1.1-.3-.4-.1-.5-.3-.8-.4-.3-.1-.4-.4-.4-.9-.1-.5 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1h.5v.1z" id="path66"></path></g><g id="g72"><path class="st2" d="M29.7 26.2c.3.1.8.4 1.1.7.1.1.3.4.3.7.1.5.1 1.1-.3 1.4-.3.4-.7.5-1.1.4-.5 0-.8-.1-1.1-.3-.4 0-.5-.3-.8-.4s-.4-.4-.4-.9c-.1-.4 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.2z" id="path70"></path></g><g id="g76"><path class="st2" d="M29.7 36.8c.3.1.8.4 1.1.7.1.1.3.4.3.7.1.7.1.9-.3 1.4-.3.4-.7.5-1.1.5-.5 0-.8-.1-1.1-.3-.4 0-.5-.3-.8-.4-.3-.1-.4-.4-.4-.8-.1-.5 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1h.5z" id="path74"></path></g><g id="g80"><path class="st2" d="M29.7 33.3c.3.1.8.4 1.1.7.1.1.3.4.3.7.1.5.1.9-.3 1.4-.3.4-.7.5-1.1.4-.5 0-.8-.1-1.1-.3-.4-.1-.5-.3-.8-.4-.3-.1-.4-.4-.4-.9-.1-.4 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.2z" id="path78"></path></g><g id="g84"><path class="st2" d="M29.7 44.1c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.5.1 1.1-.3 1.4-.3.4-.7.5-1.1.5-.5 0-.8-.1-1.1-.3-.4-.1-.7-.3-.8-.4-.3-.1-.4-.4-.4-.9-.1-.4 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.1z" id="path82"></path></g><g id="g88"><path class="st2" d="M29.7 40.5c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.5.1.9-.3 1.4-.3.4-.7.5-1.1.4-.5 0-.8-.1-1.1-.3-.4 0-.5-.3-.8-.4-.3-.1-.4-.4-.4-.8-.1-.5 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.1z" id="path86"></path></g><g id="g92"><path class="st2" d="M29.7 51.2c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.7.1 1.1-.3 1.4-.3.4-.7.5-1.1.5-.5 0-.8-.1-1.1-.3-.4 0-.5-.3-.8-.4-.3-.1-.4-.4-.4-.9-.1-.4 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.1z" id="path90"></path></g><g id="g96"><path class="st2" d="M29.7 47.6c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.7.1.9-.3 1.4-.3.4-.7.5-1.1.4-.5 0-.8-.1-1.1-.3-.4-.1-.5-.3-.8-.4-.3-.1-.4-.4-.4-.8-.1-.5 0-.8 0-1.1 0-.4.1-.5.4-.7.3-.1.5-.3.9-.1.1 0 .4 0 .5.1l.5.1z" id="path94"></path></g><g id="g100"><path class="st2" d="M29.7 54.7c.3.1.8.3 1.1.7.1.1.3.4.3.7.1.7.1 1.1-.3 1.4-.3.5-.7.5-1.1.5-.5 0-.8-.1-1.1-.3-.4-.1-.5-.3-.8-.4-.3-.1-.4-.4-.4-.8-.1-.5 0-.8 0-1.2s.1-.5.4-.7c.3-.1.5-.3.9-.1.1 0 .4 0 .5.1h.5v.1z" id="path98"></path></g><g id="g104"><path class="st2" d="M27.1 23.1c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3s.4-.7.7-.7.7.1.9.3c.3.3.5.4.7.7.3.4.7 1.1.7 1.7.1.1 0 .2 0 .3" id="path102"></path></g><g id="g108"><path class="st2" d="M27.1 26.8c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3s.4-.7.7-.7.7 0 .9.3.5.4.7.7c.3.4.7 1.1.7 1.7.1-.1 0 .2 0 .3" id="path106"></path></g><g id="g112"><path class="st2" d="M27.1 30.5c-.1.3-.3.5-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3s.4-.7.7-.7.7 0 .9.3.5.4.7.7c.1.1.3.5.5.8.1.3.1.7.1.9.2-.1.1 0 .1.3" id="path110"></path></g><g id="g116"><path class="st2" d="M27.1 34.1c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3.1-.4.4-.7.7-.7s.7 0 .9.3.5.4.7.7c.3.4.7 1.1.7 1.7.1 0 0 .1 0 .3" id="path114"></path></g><g id="g120"><path class="st2" d="M27.1 37.7c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3.1-.4.4-.7.7-.7s.7 0 .9.3.5.4.7.7c.3.4.7 1.1.7 1.7.1-.1 0 .1 0 .3" id="path118"></path></g><g id="g124"><path class="st2" d="M27.1 41.3c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.1-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3.1-.4.4-.7.7-.7s.7 0 .9.3.5.4.7.7c.3.4.7 1.1.7 1.7.1 0 0 .2 0 .3" id="path122"></path></g><g id="g128"><path class="st2" d="M27.1 45c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.1-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3.1-.4.4-.7.7-.7s.7 0 .9.3.5.4.7.7c.3.4.7 1.1.7 1.7.1-.1 0 .2 0 .3" id="path126"></path></g><g id="g132"><path class="st2" d="M27.1 48.5c-.1.3-.3.5-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.4.1-.4.4-.7.7-.7s.7 0 .9.3c.3.3.5.4.7.7.1.1.3.5.5.8.1.3.1.7.1.9.2.2.1.3.1.4" id="path130"></path></g><g id="g136"><path class="st2" d="M27.1 52.2c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3.1-.4.4-.7.7-.7s.7.1.9.3c.3.3.5.4.7.7.1.1.3.5.5.8.1.3.1.7.1.9.2.1.1.2.1.3" id="path134"></path></g><g id="g140"><path class="st2" d="M27.1 55.6c-.1.3-.3.4-.5.5-.3 0-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3.1-.4.4-.7.7-.7s.8 0 .9.3l.7.7c.1.1.3.5.5.8.1.3.3.7.1.9.1.1.1.2.1.3" id="path138"></path></g><g id="g144"><path class="st2" d="M23.9 24.6c0 .4.1.8.1 1.3.1.8.3 1.2.3 1.4 0 .3 0 .4-.3.5h-.3c-.1 0-.3-.1-.3-.5s-.1-.8-.1-1.3v-1.2c0-.3 0-.4.1-.5h.1c.3.1.3.1.4.3" id="path142"></path></g><g id="g148"><path class="st2" d="M23.8 28.3c0 .4.1.8.1 1.3.1.7.3 1.2.3 1.4 0 .3 0 .4-.3.5h-.3c-.1 0-.3-.1-.3-.5s-.1-.9-.1-1.3v-1.2c0-.3 0-.4.1-.5h.1c.4 0 .4.1.4.3" id="path146"></path></g><g id="g152"><path class="st2" d="M23.8 31.8c0 .4.1.8.1 1.3.1.8.3 1.2.3 1.4 0 .3 0 .4-.3.5-.1.1-.1.1-.3 0-.1 0-.3-.1-.3-.5s-.1-.9-.1-1.3V32c0-.3 0-.4.1-.5 0 0 0-.1.1 0 .4.1.4.2.4.3" id="path150"></path></g><g id="g156"><path class="st2" d="M23.9 35.4c0 .4.1.8.1 1.3.1.8.3 1.2.3 1.4 0 .3 0 .4-.3.5-.1.1-.1.1-.3 0-.1 0-.3-.1-.3-.5s-.1-.8-.1-1.3v-1.2c0-.3 0-.4.1-.5h.1c.3.1.3.1.4.3" id="path154"></path></g><g id="g160"><path class="st2" d="M23.8 39.1c0 .4.1.8.1 1.2.1.8.3 1.2.3 1.4 0 .3 0 .4-.3.5-.1.1-.1.1-.3 0-.1 0-.3-.1-.3-.5s-.1-.9-.1-1.3v-1.2c0-.3 0-.4.1-.5 0 0 0-.1.1 0 .4.1.4.2.4.4" id="path158"></path></g><g id="g164"><path class="st2" d="M23.9 42.6c0 .4.1.8.1 1.2.1.7.3 1.2.3 1.4 0 .3 0 .4-.3.5-.1.1-.1.1-.1 0-.1 0-.3-.1-.4-.5 0-.4-.1-.9-.1-1.3v-1.2c0-.3 0-.4.1-.5h.1c.2.3.3.3.3.4" id="path162"></path></g><g id="g168"><path class="st2" d="M23.9 46.3c0 .4.1.8.1 1.2.1.8.3 1.2.3 1.4s0 .4-.3.5c-.1.1-.1.1-.3 0-.1 0-.3-.1-.3-.5s-.1-.8-.1-1.3v-1.2c0-.3 0-.4.1-.5h.1l.4.4" id="path166"></path></g><g id="g172"><path class="st2" d="M23.9 50c0 .4.1.8.1 1.3.1.7.3 1.2.3 1.4 0 .3 0 .4-.3.5-.1.1-.1.1-.3 0-.1 0-.3-.1-.3-.5s-.1-.8-.1-1.3v-1.2c0-.3 0-.4.1-.5h.1c.3.2.3.2.4.3" id="path170"></path></g><g id="g176"><path class="st2" d="M27.1 19.7c-.1.3-.3.4-.5.5-.3.1-.5 0-.8-.1s-.5-.3-.7-.5c-.1-.3-.4-.4-.7-.9-.1-.4-.4-.9-.3-1.3s.4-.7.7-.7.7.1.9.3c.3.3.5.4.7.7.1.1.3.5.5.8.1.3.1.7.1.9.2-.1.1 0 .1.3" id="path174"></path></g><g id="g180"><path class="st2" d="M33.1 22.3c.4-.1.8-.1 1.1 0 .3 0 .5.3.7.4.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.9-.3.1-.5.4-.8.4-.4.1-.7.1-1.1.3-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.3.5-.3l.3-.1z" id="path178"></path></g><g id="g184"><path class="st2" d="M38.8 16.9c.3-.1.4.1.4.7v1.2c0 .4-.1.9-.1 1.3s-.3.5-.4.7c-.1 0-.5-.1-.5-.4-.1-.3 0-.5 0-.8.1-.3.1-.7.1-1.1s.1-.9.1-1.2c.1-.2.1-.4.4-.4" id="path182"></path></g><g id="g188"><path class="st2" d="M38.8 13c.1 0 .1 0 0 0 .2.1.2.4.4.7 0 .4.1.9 0 1.6l-.1.7c0 .4-.1.8-.3.9-.1.1-.3.1-.4 0-.1-.1-.3-.4-.3-.5 0-.3 0-.7.1-1.2s.1-1.2.1-1.4v-.4c.2-.3.2-.4.5-.4" id="path186"></path></g><g id="g192"><path class="st2" d="M38.8 20.8c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.4-.3.5h-.1c-.1-.1-.3-.4-.3-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.3-.1-.2.1-.3.2-.3" id="path190"></path></g><g id="g196"><path class="st2" d="M33.1 18.8c.4-.1.8-.1 1.1-.1s.5.3.7.4c.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.8-.3.1-.5.4-.8.4s-.7.1-1.1.3c-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.3.5-.3l.3.1z" id="path194"></path></g><g id="g200"><path class="st2" d="M33.1 29.6c.4-.1.8-.1 1.1-.1s.5.3.7.4c.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.8-.3.1-.5.4-.8.4-.4.1-.7.1-1.1.3-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.5.4-.9.8-1.2.1-.1.4-.1.5-.3l.3.1z" id="path198"></path></g><g id="g204"><path class="st2" d="M33.1 26c.4-.1.8-.1 1.1 0 .3 0 .5.3.7.4.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.9-.3.1-.5.4-.8.4s-.7.1-1.1.3c-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.1.5-.3l.3-.1z" id="path202"></path></g><g id="g208"><path class="st2" d="M33.1 36.7c.4-.1.8-.1 1.1-.1s.5.3.7.4c.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.9-.3.1-.5.4-.8.4-.3.1-.7.1-1.1.3-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.1.5-.3h.3z" id="path206"></path></g><g id="g212"><path class="st2" d="M33.1 33.1c.4-.1.8-.1 1.1-.1s.5.3.7.4c.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.8-.3.1-.5.4-.8.4s-.7.1-1.1.3c-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.1.5-.3l.3.1z" id="path210"></path></g><g id="g216"><path class="st2" d="M33.1 43.8c.4-.1.8-.1 1.1-.1s.5.3.7.4c.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.8-.3.1-.5.4-.8.4s-.7.1-1.1.3c-.4 0-.8 0-1.1-.5-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.1.5-.3l.3.2z" id="path214"></path></g><g id="g220"><path class="st2" d="M33.1 40.2c.4-.1.8-.1 1.1 0 .3 0 .5.3.7.4.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.9-.3.1-.5.4-.8.4-.4.1-.7.3-1.1.3-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.1.5-.3l.3-.1z" id="path218"></path></g><g id="g224"><path class="st2" d="M33.1 51c.4-.1.8-.1 1.1 0 .3 0 .5.3.7.4.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.8-.3.1-.5.4-.8.4s-.7.1-1.1.3c-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.1.5-.3h.3z" id="path222"></path></g><g id="g228"><path class="st2" d="M33.1 47.5c.4-.1.8-.1 1.1 0 .3 0 .5.3.7.4.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.8-.3.1-.5.4-.8.4-.4.1-.7.1-1.1.3-.4 0-.8 0-1.1-.4-.3-.4-.3-.8-.3-1.4.1-.5.4-.9.8-1.2.1-.1.4-.3.5-.3h.3z" id="path226"></path></g><g id="g232"><path class="st2" d="M33.1 54.6c.4-.1.8-.1 1.1-.1s.5.3.7.4c.1.3.1.7.3.9v.5c-.1.4-.3.7-.4.8-.3.1-.5.4-.8.4-.4.1-.7.1-1.1.3-.4 0-.8 0-1.1-.5-.3-.4-.3-.8-.3-1.4.1-.7.4-.9.8-1.2.1-.1.4-.1.5-.3l.3.2z" id="path230"></path></g><g id="g236"><path class="st2" d="M35.2 22.7c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.3.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.1-.5-.5-.2-.2-.2-.3-.2-.5" id="path234"></path></g><g id="g240"><path class="st2" d="M35.2 26.3c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.3-.5-.5-.2-.2-.2-.4-.2-.5" id="path238"></path></g><g id="g244"><path class="st2" d="M35.2 30c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.1-.5-.5-.2-.3-.2-.4-.2-.5" id="path242"></path></g><g id="g248"><path class="st2" d="M35.2 33.5c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.3-.5-.5-.2-.2-.2-.3-.2-.5" id="path246"></path></g><g id="g252"><path class="st2" d="M35.2 37.2c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.1-.5-.5-.2-.2-.2-.4-.2-.5" id="path250"></path></g><g id="g256"><path class="st2" d="M35.2 40.8c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.1-.5-.5-.2-.1-.2-.4-.2-.5" id="path254"></path></g><g id="g260"><path class="st2" d="M35.2 44.5c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.3-.5-.5-.2-.3-.2-.4-.2-.5" id="path258"></path></g><g id="g264"><path class="st2" d="M35.2 48c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.1-.5-.5-.2-.1-.2-.2-.2-.5" id="path262"></path></g><g id="g268"><path class="st2" d="M35.2 51.7c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.4.1-.5.1-.8.1s-.5-.3-.5-.5c-.2-.2-.2-.4-.2-.5" id="path266"></path></g><g id="g272"><path class="st2" d="M35.2 55.1c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.4.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.3-.5-.5-.2-.1-.2-.3-.2-.5" id="path270"></path></g><g id="g276"><path class="st2" d="M38.7 24.3c.1 0 .1 0 0 0 .1.1.2.3.2.5V26c0 .4-.1.9-.1 1.3s-.1.5-.4.5h-.1c-.1-.1-.3-.4-.3-.5.1-.5.3-1.1.3-1.4 0-.4.1-.9.1-1.2.1-.3.3-.4.3-.4" id="path274"></path></g><g id="g280"><path class="st2" d="M38.7 28c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.4-.3.5h-.3c-.1-.1-.2-.3-.2-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.2.1-.3.1-.3.3-.4" id="path278"></path></g><g id="g284"><path class="st2" d="M38.8 31.6c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.5-.3.5h-.1c-.1-.1-.3-.4-.3-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.3-.1-.2.1-.3.2-.3" id="path282"></path></g><g id="g288"><path class="st2" d="M38.8 35.2c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.4-.3.5h-.1c-.1-.1-.3-.3-.3-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.2-.1-.4.1-.4.2-.4" id="path286"></path></g><g id="g292"><path class="st2" d="M38.8 38.7c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.5-.3.5h-.1c-.1-.1-.3-.4-.3-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.3-.1-.2.1-.2.2-.3" id="path290"></path></g><g id="g296"><path class="st2" d="M38.8 42.5c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.4-.3.5h-.1c-.1-.1-.3-.4-.3-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.2-.1-.4.1-.4.2-.4" id="path294"></path></g><g id="g300"><path class="st2" d="M38.8 46c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.4-.3.5h-.1c-.1-.1-.3-.3-.3-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.3-.1-.1.1-.3.2-.3" id="path298"></path></g><g id="g304"><path class="st2" d="M38.8 49.6c.1 0 .1 0 0 0 .1.1.2.3.2.5v1.2c0 .4-.1.9-.1 1.3s-.1.4-.3.5h-.1c-.1-.1-.3-.4-.3-.5.1-.5.1-1.1.3-1.4 0-.4.1-.9.1-1.2-.1-.3.1-.3.2-.4" id="path302"></path></g><g id="g308"><path class="st2" d="M35.2 19.2c0-.4.1-.9.4-1.3.1-.3.3-.4.5-.7.3-.3.4-.4.8-.5.4-.1.7 0 .9.1.3.3.4.7.3 1.2-.1.5-.3.9-.5 1.2-.3.4-.5.7-.9.9-.3.1-.4.1-.8.1-.3 0-.5-.3-.5-.5-.2-.3-.2-.4-.2-.5" id="path306"></path></g><g id="g312"><path class="st2" d="M27.5 10.9c0 .3-.3.5-.4.7-.5.5-1.6 1.1-2.8 1.3-.3 0-.7-.3-.8-.5-.4-.8-.4-2-.1-2.6.1-.5.5-.9.9-.9 1.2.3 2.4.9 2.8 1.3s.4.6.4.7" id="path310"></path></g><g id="g316"><path class="st2" d="M32.3 14.4c.3 0 .5 0 .8.3.7.4 1.6 1.2 2.1 2.2.1.3-.1.7-.3.9-.7.7-1.7 1.1-2.5.9-.5 0-1.1-.3-1.1-.7-.1-1.2.3-2.5.4-3l.6-.6" id="path314"></path></g><g id="g320"><path class="st2" d="M30.1 14.4c.3.1.4.4.5.7.3.7.5 1.8.4 3 0 .3-.5.5-.8.5-.9.1-2-.3-2.5-.7-.4-.3-.7-.8-.5-1.2.7-1.1 1.6-2 2.1-2.2.4-.1.5-.1.8-.1" id="path318"></path></g><g id="g324"><path class="st2" d="M28.4 13c.1.1.1.5 0 .8-.3.8-.7 1.8-1.4 2.8-.3.3-.7.1-.9 0-.8-.4-1.4-1.3-1.6-2.1-.1-.5-.1-1.1.3-1.2 1.1-.5 2.5-.7 3-.5.3.1.5.1.6.2" id="path322"></path></g><g id="g328"><path class="st2" d="M34.8 11c0-.3.3-.5.4-.7.7-.5 1.6-1 2.8-1.3.3 0 .7.3.8.5.4.8.4 2 .1 2.6-.1.5-.5.9-.9.8-1.2-.3-2.4-1.1-2.8-1.4-.2-.2-.4-.3-.4-.5" id="path326"></path></g><g id="g332"><path class="st2" d="M32.3 7.6c-.3-.1-.4-.4-.5-.7-.3-.7-.5-2-.4-3 0-.3.5-.5.8-.5.9-.1 2 .3 2.5.7.4.3.7.8.5 1.2-.7 1.1-1.7 2-2.1 2.2-.4.1-.5.1-.8.1" id="path330"></path></g><g id="g336"><path class="st2" d="M30.1 7.6c-.3.1-.5 0-.8-.1-.7-.4-1.6-1.2-2.1-2.2-.1-.3.1-.7.3-.9.7-.7 1.7-1.1 2.4-.9.5 0 1.1.3 1.1.7.1 1.2-.1 2.5-.4 3-.2.1-.2.3-.5.4" id="path334"></path></g><g id="g340"><path class="st2" d="M34.2 8.8c-.1-.1-.1-.5 0-.8.3-.8.7-1.8 1.4-2.6.1-.1.7-.1.9 0 .8.4 1.4 1.3 1.6 2.1.1.5.1 1.1-.3 1.2-1.1.5-2.5.5-3 .5-.3-.2-.5-.2-.6-.4" id="path338"></path></g><g id="g344"><path class="st2" d="M34.2 13.1c.1-.1.5-.3.8-.3.8 0 2 .1 3 .5.3.1.3.7.3.9-.1.9-.8 1.8-1.4 2.2-.4.3-1.1.4-1.2.1-.8-.9-1.3-2.2-1.4-2.8-.2-.3-.2-.4-.1-.6" id="path342"></path></g><g id="g348"><path class="st2" d="M28.3 8.8c-.2.1-.6.2-.8.2-.8 0-2 0-3-.5-.3-.1-.4-.7-.3-.9.1-.9.8-1.8 1.4-2.2.4-.3 1.1-.4 1.2-.2.8.9 1.3 2.2 1.4 2.8.2.5.2.7.1.8" id="path346"></path></g><g id="g352"><path class="st2" d="M31.3 14.4c1.8 0 3.4-1.6 3.4-3.4s-1.6-3.4-3.4-3.4-3.4 1.6-3.4 3.4 1.4 3.4 3.4 3.4" id="path350"></path></g></g><g id="g362"><g id="g360"><g id="g358"><path class="st2" d="M15.2 27.9V3.3h1.2v25s.1 5.5.1 7.1-.3 3-.3 3-.3 2.1-1.6 3.3c0 0-.8 1.1-1.7 1.7-.9.8-1.1 1.3-1.2 1.7-.1.5-.3 1.7-.3 1.7s5.5-6.2 5.8-9.1V3.1h1.2V38.7s-.1 4.9-2 9.1L15 50.6c-1.1 1.6-3.3 3.6-3.4 5 0 .8-.1 1.7-.1 1.7h-1.4l-.1-3.6s0-1.2-.3-2c-.3-1.1-.5-1.6-.9-2.1S8 48.5 7.6 48C2.5 41.2 3 36.2 3 35.8V2.9h1V33.3s-.1 2.4 1.6 4.2c1.2 1.3 1.3 1.2 2.2 2.4.9 1.1 1.6 2.5 1.6 2.5s.1 0 0-1.3c0-1.3-1.3-2.4-1.3-2.4C4.8 35.8 5 31.8 5 31.8L4.8 2.7h.9v20.1s0 .9.4 2c.3 1.1.8 2.1 1.4 3.9 1.3 3 2.2 4.9 2.2 4.9s-.1-2.5-.5-3c-.4-.7-.9-2.1-.9-2.1-.8-2-1.1-3-1.2-3.6-.4-1.7-.4-2.6-.4-2.6V3h1.1v12.5c0 2.4.5 3.2.9 4.1s.8 2.5.8 2.5.3-.9-.4-3.8c-.1-.8-.4-3.6-.4-3.6V3.1h.9v7.6s.3 3.3.7 2.4.4-1.8.4-1.8V3.1h1.1v17.5s-.1 2.2-.5 3.6c-.5 1.6-.3 2.6-.3 2.6l1.1-2.2c.8-1.7.8-3 .8-3V3.3H14v24.2c0 1.3-.3 2-1.3 5-.7 2-1.1 2.4-1.2 3.2-.3 1.1-.1 2.1-.1 2.1l1.6-3.2c.8-1.8 1.1-2.6 1.6-4.1.1-.1.6-1.2.6-2.6z" id="path356"></path></g></g></g></g></g><g id="g378"><g id="g370"><path class="st2" d="M369.9 38.4c-1.4-.1-3.6-.4-5.5-.7-1.3-.3-2.4-.9-3.4-2-1.8-1.8-2.2-4.5-2-7h1.7c.5 5.9 4.3 7 6.3 6.8.3-3.9.5-6.5.7-11.1.1-2.4-1.4-2.4-3.4-2.6-1.8-.3-7.9-.5-9.6-.7-.1 1.2-.4 10.5-.5 13.8 0 1.3-.1 2.6.5 3.4s1.7.8 2.8.8c1.6.1 12.6.8 13.3.8l-.9-1.5z" id="path368"></path></g><g id="g374"><path d="M371.9 30.8c.8-1.2 2.1-2.9 3.3-4.3.8-1.1 2-1.6 3.4-2 2.5-.7 5 .4 7.1 1.7-.3.5-.4.7-.9 1.4-5.4-2.5-8.3.3-9.1 2.1 3.3 2.1 5.3 3.7 9.2 6.1 2 1.3 2.8 0 3.9-1.7 1.1-1.4 4.5-6.6 5.4-7.9-1.1-.7-9-5.7-11.6-7.4-1.1-.7-2.2-1.4-3.2-1.2-1.1.3-1.6 1.2-2.1 2-.9 1.3-7 10.5-7.4 11.1l2 .1z" id="path372" style="fill:#8ec1cb"></path></g><path d="M384.5 46.6c-.7-1.4-5.7-11.3-5.9-11.8l-1.1 1.6c.7 1.3 1.4 3.3 2.2 5 .5 1.2.5 2.5.1 3.9-.7 2.5-2.8 4.2-5 5.3-.3-.5-.4-.7-.9-1.6 4.9-3.4 3.8-7.2 2.6-9-3.4 1.7-5.8 2.8-9.9 5.1-2.1 1.1-1.3 2.4-.5 4.3.8 1.7 3.6 7.1 4.2 8.6 1.1-.5 9.3-5 12.1-6.5 1.1-.7 2.4-1.2 2.6-2.2.6-.9 0-1.8-.5-2.7z" id="path376" style="fill:#fdbe50"></path></g></g></svg>
+      <small>PROCUREMENT INTELLIGENCE</small>
+    </div>
+    <nav class="nav" id="nav" aria-label="Dashboard pages"></nav>
+    <svg class="wheat" width="84" height="120" viewBox="0 0 84 120" fill="none" aria-hidden="true">
+      <path d="M42 10c8 8 12 18 0 36C30 28 34 18 42 10z" fill="#8bc53f"/>
+      <path d="M42 28c10 8 14 20 0 38C28 48 32 36 42 28z" fill="#8bc53f"/>
+      <path d="M42 18v90" stroke="#8bc53f" stroke-width="3"/>
+    </svg>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+  <main class="main">
+    <header class="top">
+      <div>
+        <div class="eyebrow">CIMMYT Asia / Operations Analytics</div>
+        <h1 id="pageTitle">Procurement</h1>
+        <div class="sub" id="pageSub"></div>
+      </div>
+      <div class="tools">
+        <label>Created from<input type="date" id="dFrom"></label>
+        <label>Created to<input type="date" id="dTo"></label>
+        <button class="btn primary" id="loadBtn">Load data</button>
+        <button class="btn" id="signOutBtn">Sign out</button>
+      </div>
+    </header>
+    <div id="filters" class="filters"></div>
+    <div id="content"></div>
+  </main>
+</div>
+
+<dialog id="detailDialog" aria-labelledby="detailTitle">
+  <div class="panel-head"><div><h2 id="detailTitle">Details</h2><div class="sub" id="detailSub"></div></div>
+  <div style="display:flex;gap:8px"><button class="btn small" id="detailExport">Export CSV</button><button class="btn small" id="detailClose">Close</button></div></div>
+  <div id="detailBody"></div>
+</dialog>
+
+<input id="planInput" type="file" hidden accept=".xlsx,.xls,.csv">
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ============================== Config and state ============================== */
+const COUNTRIES = { CIND: "India", CPAK: "Pakistan", CBGD: "Bangladesh", CNPL: "Nepal", CTUR: "Turkey" };
+const COUNTRY_COLOR = { India: "#0798d4", Bangladesh: "#0aa3b8", Nepal: "#6fbf3a", Pakistan: "#8b63d6", Turkey: "#f59b22" };
+const PALETTE = ["#0798d4", "#0aa3b8", "#6fbf3a", "#f59b22", "#8b63d6", "#5b6fd6", "#e5484d", "#7b90a4", "#c4578f", "#3aa58a"];
+const STAGES = ["Draft", "In review", "Approved", "PO open", "Received", "Invoiced", "Rejected", "Cancelled"];
+const STAGE_COLOR = { "Draft": "#b9c6d0", "In review": "#f59b22", "Approved": "#5b6fd6", "PO open": "#0798d4", "Received": "#6fbf3a", "Invoiced": "#0c3554", "Rejected": "#e5484d", "Cancelled": "#8a9bab" };
+const STAGE_PILL = { "Draft": "grey", "In review": "orange", "Approved": "blue", "PO open": "blue", "Received": "green", "Invoiced": "green", "Rejected": "red", "Cancelled": "grey" };
+const FALLBACK_RATE = { INR: 88, BDT: 122, NPR: 141, PKR: 281, TRY: 42 }; // approximate; only used when the data has no invoiced line for a currency
+const PLAN_STAGES = [["granted", "Project granted"], ["tor", "TOR"], ["tender", "Tender float"], ["vendor", "Vendor onboard"], ["po", "PO issue"]];
+const PLAN_COLOR = { Completed: "#6fbf3a", "On track": "#9fb3c2", "Due (within buffer)": "#f59b22", Overdue: "#e5484d" };
+const TABS = [
+  ["overview", "Overview", "home"], ["orders", "Purchase Orders", "list"], ["delivery", "Delivery & Invoicing", "truck"], ["reqs", "Requisitions", "doc"],
+  ["plan", "Procurement Plan", "flag"], ["projects", "Projects & ICC", "folder"], ["periods", "Yearly & Quarterly", "cal"], ["suppliers", "Suppliers & Categories", "users"]
+];
+const ICONS = {
+  home: '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>', list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  doc: '<path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6"/>', flag: '<path d="M4 21V4M4 4h13l-2 4 2 4H4"/>',
+  truck: '<path d="M1 6h13v10H1zM14 10h4l4 3v3h-8zM6 19a2 2 0 100-4 2 2 0 000 4zM18 19a2 2 0 100-4 2 2 0 000 4z"/>', folder: '<path d="M3 6h7l2 3h9v10H3z"/>',
+  cal: '<path d="M3 9h18M5 5h14v16H5zM8 3v4M16 3v4"/>', users: '<path d="M16 21v-2a4 4 0 00-8 0v2M12 11a4 4 0 100-8 4 4 0 000 8z"/>'
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("cimmytProc." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("cimmytProc." + k, JSON.stringify(v)); } catch { /* storage unavailable */ } }
+};
+// Fixed configuration. To change a value, edit it here.
+const cfg = Object.freeze({
+  api: "http://127.0.0.1:3001", // procurement API address, no trailing slash
+  tor: 15, tender: 30, vendor: 60, po: 75, // predicted stage dates: days after the project granted date
+  buffer: 15   // days a stage stays orange before it turns red
+});
+let PO = [];            // normalised purchase order lines
+let poLoading = true;   // true while purchase orders are being fetched
+let PR = [];            // normalised requisitions
+let prState = "idle";   // idle | loading | ready | error
+let prError = "";
+let prRun = 0;
+let prFilters = { status: "All", program: "All" };
+let rawCsv = "";        // the report exactly as the API returned it
+let PLAN = store.get("plan", []);
+let planSource = store.get("planSource", "");
+let dataRates = {};     // currency -> rate derived from invoiced lines
+let tab = "overview";
+let filters = { country: "All", project: "All", category: "All", stage: "All", buyer: "All" };
+let periodMode = "Quarterly";
+let periodYear = "All";
+let charts = [];
+let pendingCharts = [];
+let tables = {};        // table id -> { rows, cols, sort, dir, page, q, onRow }
+let details = [];       // KPI detail payloads for the current render
+let currentDetail = null;
+
+/* ============================== Helpers ============================== */
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const TODAY = iso(new Date());
+const toDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = toDate(s); d.setDate(d.getDate() + n); return iso(d); };
+const diffDays = (a, b) => Math.round((toDate(b) - toDate(a)) / 864e5); // b - a
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const showDate = (s) => { if (!s) return "–"; const [y, m, d] = s.split("-"); return `${d} ${MONTHS[+m - 1]} ${y}`; };
+const fmtInt = (n) => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
+const money = (n) => { n = Number(n || 0); const a = Math.abs(n), sign = n < 0 ? "-" : ""; return sign + (a >= 1e6 ? "$" + (a / 1e6).toFixed(2) + "M" : a >= 1e4 ? "$" + (a / 1e3).toFixed(1) + "K" : "$" + a.toLocaleString("en-US", { maximumFractionDigits: 0 })); };
+const pct = (a, b) => (b ? Math.round((100 * a) / b) + "%" : "–");
+const sum = (rows, fn) => rows.reduce((s, r) => s + (Number(fn(r)) || 0), 0);
+const uniq = (rows, fn) => [...new Set(rows.map(fn).filter((v) => v !== "" && v != null))].sort((a, b) => String(a).localeCompare(String(b)));
+const median = (a) => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : null; };
+function tally(rows, keyFn, valFn = () => 1) {
+  const m = new Map();
+  rows.forEach((r) => { const k = keyFn(r) || "Not set"; m.set(k, (m.get(k) || 0) + (Number(valFn(r)) || 0)); });
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove("show"), 4200); }
+let loadError = ""; // last load failure, shown in the centre of the page
+const API_BASE = cfg.api.replace(/\/+$/, "");
+const UNREACHABLE = "Could not reach the procurement API at " + cfg.api + ". Check that the backend is running, that you are on the company network or VPN, and that this page's address is listed in the backend's ALLOWED_ORIGINS.";
+let authToken = "";  // session token from the API; the password itself is never kept
+function downloadBlob(name, blob) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000); }
+function exportCsv(name, rows, cols) {
+  const cell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const lines = [cols.map((c) => cell(c.label)).join(",")].concat(rows.map((r) => cols.map((c) => cell(c.csv ? c.csv(r) : c.get(r))).join(",")));
+  downloadBlob(name, new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" }));
+}
+/** Accepts a Date, an Excel serial number or text (YYYY-MM-DD, DD-Mon-YYYY, DD/MM/YYYY). Returns YYYY-MM-DD or null. */
+function parseAnyDate(v) {
+  if (v == null || v === "") return null;
+  if (v instanceof Date) return isNaN(v) ? null : iso(v);
+  if (typeof v === "number") { const d = new Date(Math.round((v - 25569) * 864e5)); return isNaN(d) ? null : `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; }
+  const s = String(v).trim();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (m) return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  m = /^(\d{1,2})[-\s]([A-Za-z]{3})[A-Za-z]*[-\s](\d{4})/.exec(s);
+  if (m) { const i = MONTHS.findIndex((x) => x.toLowerCase() === m[2].toLowerCase()); return i < 0 ? null : `${m[3]}-${pad(i + 1)}-${pad(+m[1])}`; }
+  m = /^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/.exec(s); // day first
+  if (m && +m[2] <= 12 && +m[1] <= 31) return `${m[3]}-${pad(+m[2])}-${pad(+m[1])}`;
+  return null;
+}
+const quarterOf = (d) => "Q" + (Math.floor((+d.slice(5, 7) - 1) / 3) + 1);
+
+/* ============================== Purchase orders: load and normalise ==============================
+   Source: GET /api/purchase-orders/csv, the original D365 report. Each row is one PO line.
+   Columns ending in 3 (or 2) repeat the PO header on every line; columns ending in 7 hold the line itself. */
+const PO_REQUIRED = ["Textbox148", "PURCHID3", "MAINCREATEDDATE3", "LINEAMOUNTPO7", "StatusName3"];
+function num(v) {
+  if (v == null) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  let t = String(v).trim().replace(/,/g, "");
+  if (t === "" || t === "-") return null;
+  const neg = /^\(.*\)$/.test(t); // the report writes negatives as (19)
+  if (neg) t = t.slice(1, -1);
+  const n = Number(t);
+  return Number.isFinite(n) ? (neg ? -n : n) : null;
+}
+function stageOf(status, appr) {
+  if (/cancel/i.test(status)) return "Cancelled";
+  if (/reject/i.test(appr)) return "Rejected";
+  if (/draft/i.test(appr)) return "Draft";
+  if (/review/i.test(appr)) return "In review";
+  if (/^approved/i.test(appr)) return "Approved";
+  if (/invoic/i.test(status)) return "Invoiced";
+  if (/receiv/i.test(status)) return "Received";
+  return "PO open";
+}
+function normaliseLine(r) {
+  const t = (k) => String(r[k] ?? "").trim();
+  const cc = t("Textbox148"), status = t("StatusName7") || t("StatusName3"), appr = t("DOCSTATENAME3") || t("DOCSTATENAME2");
+  const icc = t("PURCHPROJID7") || t("PURCHPROJID3"), date = parseAnyDate(t("MAINCREATEDDATE3")), lastInv = parseAnyDate(t("LASTINVOICEDATE7"));
+  const o = {
+    po: t("PURCHID3"), line: num(r.REQUESTOR9), pr: t("purchreqid6") || t("purchreqid2"), cc, country: COUNTRIES[cc],
+    date, reqDel: parseAnyDate(t("MAINDELIVERYDATE7") || t("MAINDELIVERYDATE3")), lastPO: parseAnyDate(t("LASTPODATE2")), lastPack: parseAnyDate(t("LASTPACKSLIP3")), lastInv,
+    desc: t("VENDID7"), vendor: t("VENDID3"), cat: t("Textbox346") || t("Textbox63"), catCode: t("Textbox345") || t("Textbox52"), dim: t("BUYER7"),
+    icc, project: icc.split(".")[0], qty: num(r.Textbox347), invQty: num(r.Textbox351), unit: t("Textbox348"), price: num(r.Textbox349),
+    cur: t("CURRMAIN7") || t("CURRMAIN3"), amtPO: num(r.LINEAMOUNTPO7), amtInv: num(r.LINEAMOUNTINVOICE7), usdInv: num(r.LINEAMOUNTMST7), poTotal: num(r.LINEAMOUNTPO3),
+    status, appr, stage: stageOf(status, appr), buyerCode: t("BUYER3"), buyer: t("ORDERERNAME3") || t("ORDERERNAME2") || t("BUYER3") || "Not set",
+    requester: t("REQUESTOR8") || t("REQUESTOR3"), asset: t("ASSETID7"), capex: t("CAPEXCODE7")
+  };
+  o.cycle = date && lastInv ? Math.max(0, diffDays(date, lastInv)) : null; // days from PO creation to last invoice
+  return o;
+}
+function ingestPO(csvText) {
+  const parsed = Papa.parse(csvText.replace(/^﻿/, ""), { header: true, skipEmptyLines: true });
+  const fields = parsed.meta.fields || [];
+  const missing = PO_REQUIRED.filter((f) => !fields.includes(f));
+  if (missing.length) throw new Error("The purchase orders report layout changed: column " + missing.join(", ") + " is missing.");
+  const rows = parsed.data.filter((r) => COUNTRIES[String(r.Textbox148 ?? "").trim()]).map(normaliseLine).filter((r) => r.po);
+  const byCur = {};
+  rows.forEach((r) => { if (r.amtInv > 0 && r.usdInv > 0) (byCur[r.cur] = byCur[r.cur] || []).push(r.amtInv / r.usdInv); });
+  dataRates = {};
+  Object.entries(byCur).forEach(([c, a]) => { dataRates[c] = median(a); });
+  rows.forEach((r) => { const rate = rateFor(r.cur); r.usd = r.amtPO != null && rate ? r.amtPO / rate : (r.usdInv || 0); r.inv = r.usdInv != null ? r.usdInv : (r.amtInv != null && rate ? r.amtInv / rate : 0); });
+  rows.sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.po.localeCompare(b.po) || (a.line || 0) - (b.line || 0));
+  PO = rows; rawCsv = csvText;
+  filters = { country: "All", project: "All", category: "All", stage: "All", buyer: "All" };
+}
+function rateFor(cur) { return dataRates[cur] || FALLBACK_RATE[cur] || (cur === "USD" ? 1 : null); }
+function rateNote() {
+  const curs = uniq(PO, (r) => r.cur);
+  if (!curs.length) return "";
+  return "Committed values are USD estimates: line amount in local currency ÷ rate. Invoiced values are the USD amounts recorded in D365. Rates per USD: " +
+    curs.map((c) => `${c} ${rateFor(c) ? rateFor(c).toFixed(2) : "?"} (${dataRates[c] ? "from invoiced lines" : "fallback"})`).join(", ") + ".";
+}
+async function apiGet(path, params) {
+  const q = new URLSearchParams();
+  Object.entries(params || {}).forEach(([k, v]) => { if (v) q.set(k, v); });
+  let res;
+  try { res = await fetch(API_BASE + path + (q.toString() ? "?" + q : ""), { headers: { Authorization: "Bearer " + authToken } }); }
+  catch { throw new Error(UNREACHABLE); }
+  if (res.status === 401) { showSignIn("Your session has ended. Sign in again."); throw new Error("Sign in to continue."); }
+  if (!res.ok) { let d = {}; try { d = await res.json(); } catch { /* not JSON */ } throw new Error((d.field ? `Check the ${d.field} filter: ` : "") + (d.message || `The API returned HTTP ${res.status}.`)); }
+  return res;
+}
+async function loadFromApi() {
+  const from = $("dFrom").value, to = $("dTo").value;
+  if (from && to && from > to) { toast("The start date must be on or before the end date."); return; }
+  const btn = $("loadBtn"); btn.disabled = true; btn.textContent = "Loading…";
+  poLoading = true; loadError = ""; PO = []; PR = []; prState = "idle"; render();
+  const token = authToken;
+  try {
+    const csv = await (await apiGet("/api/purchase-orders/csv", { CreatedStartDate: from, CreatedEndDate: to })).text();
+    if (token !== authToken) return; // signed out while loading: discard the result
+    ingestPO(csv);
+    poLoading = false; render();
+    loadPR(); // requisitions follow in the background
+  } catch (e) { if (token === authToken) { poLoading = false; loadError = e.message; render(); } }
+  finally { btn.disabled = false; btn.textContent = "Load data"; }
+}
+
+/* ============================== Requisitions ============================== */
+async function loadPR() {
+  const run = ++prRun;
+  prState = "loading"; if (tab === "reqs") render();
+  const from = $("dFrom").value, to = $("dTo").value;
+  const results = await Promise.allSettled(Object.keys(COUNTRIES).map(async (cc) => {
+    const text = await (await apiGet("/api/purchase-requisitions", { CreatedStartDate: from, CreatedEndDate: to, Country: cc })).text();
+    const parsed = Papa.parse(text.replace(/^﻿/, ""), { header: true, skipEmptyLines: true });
+    return parsed.data.map((r) => ({
+      id: (r.textbox37 || "").trim(), country: COUNTRIES[cc], created: parseAnyDate(r.textbox36), submitted: parseAnyDate(r.Textbox16),
+      requester: (r.textbox26 || "").trim(), status: (r.docstatus || "").trim() || "Not set", po: (r.Textbox760 || "").trim(), poDate: parseAnyDate(r.textbox40),
+      poStatus: (r.textbox38 || "").trim(), just: (r.BUSJUS || "").trim(), desc: (r.textbox39 || "").trim(), program: (r.ordererpogram || "").trim(), days: num(r.Textbox21)
+    })).filter((r) => r.id);
+  }));
+  if (run !== prRun) return; // a newer load started meanwhile
+  const ok = results.filter((r) => r.status === "fulfilled");
+  if (!ok.length) { prState = "error"; prError = results[0].reason.message; if (tab === "reqs" || tab === "overview") render(); return; }
+  const seen = new Set();
+  PR = ok.flatMap((r) => r.value).filter((r) => { const k = r.id + "|" + r.po; if (seen.has(k)) return false; seen.add(k); return true; });
+  const poByPr = new Map();
+  PO.forEach((r) => { if (r.pr && r.date && (!poByPr.has(r.pr) || r.date < poByPr.get(r.pr).date)) poByPr.set(r.pr, r); });
+  PR.forEach((r) => {
+    const link = poByPr.get(r.id);
+    if (link) { r.po = r.po || link.po; r.poDate = r.poDate && r.poDate < link.date ? r.poDate : link.date; }
+    r.open = /review|draft|approved/i.test(r.status) && !r.po;
+    r.age = r.open && r.created ? Math.max(0, diffDays(r.created, TODAY)) : null;
+    r.lead = r.po && r.created && r.poDate ? Math.max(0, diffDays(r.created, r.poDate)) : null;
+  });
+  prState = "ready";
+  const failed = results.length - ok.length;
+  if (failed) toast(`Requisitions: ${failed} of ${results.length} country requests failed; showing the rest.`);
+  if (tab === "reqs" || tab === "overview") render();
+}
+
+/* ============================== Procurement plan ============================== */
+const PLAN_COLS = [
+  ["icc", "ICC", ["icc", "icccode", "projectid", "icc/projectid"]], ["project", "Project", ["project", "projectname"]], ["country", "Country", ["country"]],
+  ["item", "Item / Requirement", ["item", "itemrequirement", "requirement", "description", "itemdescription"]], ["category", "Category", ["category"]],
+  ["method", "Procurement Method", ["procurementmethod", "method"]], ["value", "Estimated Value USD", ["estimatedvalueusd", "estimatedvalue", "valueusd", "budgetusd"]],
+  ["owner", "Responsible", ["responsible", "owner", "buyer"]],
+  ["granted", "Project Granted Date", ["projectgranteddate", "projectgranted", "granteddate", "grantdate"]],
+  ["torP", "TOR Planned Date", ["torplanneddate", "torplanned", "tordate"]], ["torA", "TOR Actual Date", ["toractualdate", "toractual"]],
+  ["tenderP", "Tender Float Planned Date", ["tenderfloatplanneddate", "tenderplanneddate", "tenderplanned", "tenderfloatdate"]], ["tenderA", "Tender Float Actual Date", ["tenderfloatactualdate", "tenderactualdate", "tenderactual"]],
+  ["vendorP", "Vendor Onboard Planned Date", ["vendoronboardplanneddate", "vendorplanneddate", "vendorplanned", "vendoronboarddate"]], ["vendorA", "Vendor Onboard Actual Date", ["vendoronboardactualdate", "vendoractualdate", "vendoractual"]],
+  ["poP", "PO Issue Planned Date", ["poissueplanneddate", "poplanneddate", "poplanned", "poissuedate"]], ["poA", "PO Issue Actual Date", ["poissueactualdate", "poactualdate", "poactual"]],
+  ["prNo", "PR Number", ["prnumber", "prno", "pr"]], ["poNo", "PO Number", ["ponumber", "pono", "po"]]
+];
+const DATE_KEYS = ["granted", "torP", "torA", "tenderP", "tenderA", "vendorP", "vendorA", "poP", "poA"];
+const normHead = (h) => String(h).toLowerCase().replace(/[^a-z0-9\/]/g, "");
+function parsePlanRows(raw) {
+  if (!raw.length) throw new Error("The sheet has no rows.");
+  const map = {};
+  Object.keys(raw[0]).forEach((h) => { const n = normHead(h); const col = PLAN_COLS.find((c) => c[2].includes(n) || normHead(c[1]) === n); if (col) map[col[0]] = h; });
+  if (!map.icc) throw new Error('No "ICC" column found. Download the template to see the expected columns.');
+  if (!map.granted) throw new Error('No "Project Granted Date" column found. The timeline is calculated from it.');
+  let skipped = 0;
+  const rows = raw.map((r) => {
+    const o = {};
+    PLAN_COLS.forEach(([k]) => { const v = map[k] ? r[map[k]] : ""; o[k] = DATE_KEYS.includes(k) ? parseAnyDate(v) : k === "value" ? num(v) : String(v ?? "").trim(); });
+    return o;
+  }).filter((o) => { if (o.icc && o.granted) return true; if (o.icc || o.item) skipped++; return false; });
+  if (!rows.length) throw new Error("No row has both an ICC and a Project Granted Date.");
+  return { rows, skipped };
+}
+/** Adds stage dates and colours. Orange from the planned date; red once the buffer has passed. */
+function evaluatePlan() {
+  const poByNo = new Map(), poByPr = new Map();
+  PO.forEach((r) => { if (!r.date) return; if (!poByNo.has(r.po) || r.date < poByNo.get(r.po)) poByNo.set(r.po, r.date); if (r.pr && (!poByPr.has(r.pr) || r.date < poByPr.get(r.pr))) poByPr.set(r.pr, r.date); });
+  return PLAN.map((p) => {
+    const d365 = (p.poNo && poByNo.get(p.poNo)) || (p.prNo && poByPr.get(p.prNo)) || null;
+    const stages = PLAN_STAGES.map(([key, label]) => {
+      if (key === "granted") return { key, label, planned: p.granted, actual: p.granted <= TODAY ? p.granted : null, predicted: false };
+      const actual = key === "po" ? (p.poA || d365) : p[key + "A"];
+      return { key, label, planned: p[key + "P"] || addDays(p.granted, Number(cfg[key]) || 0), predicted: !p[key + "P"], actual, fromD365: key === "po" && !p.poA && !!d365 };
+    });
+    stages.forEach((s) => {
+      if (s.actual) { s.state = "done"; s.late = Math.max(0, diffDays(s.planned, s.actual)); }
+      else if (TODAY < s.planned) { s.state = "upcoming"; s.daysLeft = diffDays(TODAY, s.planned); }
+      else { s.over = diffDays(s.planned, TODAY); s.state = s.over > Number(cfg.buffer) ? "overdue" : "due"; }
+    });
+    const current = stages.find((s) => s.state !== "done");
+    const status = !current ? "Completed" : current.state === "overdue" ? "Overdue" : current.state === "due" ? "Due (within buffer)" : "On track";
+    return Object.assign({}, p, { stages, current, status, currentLabel: current ? current.label : "All stages done" });
+  });
+}
+function downloadTemplate() {
+  const head = PLAN_COLS.map((c) => c[1]);
+  const example = ["A1183.01.04", "Example project", "India", "Lab consumables for field season", "Supplies", "Request for Quotation", 12000, "Buyer name", "2026-10-01", "", "", "", "", "", "", "", "", "", ""];
+  const notes = [["How to fill this template"], ["One row per planned procurement. ICC and Project Granted Date are required."],
+    ["Dates: type them as YYYY-MM-DD, or as real Excel dates. Text like 05/11/2026 is read as day/month/year."],
+    ["Planned dates are optional. When a planned date is empty, the dashboard predicts it from the Project Granted Date (TOR +15, Tender float +30, Vendor onboard +60, PO issue +75 days)."],
+    ["Fill an Actual date when a stage is finished. The stage then turns green."],
+    ["Colours: grey = planned date not reached. Orange = planned date reached, inside the 15-day buffer. Red = more than 15 days past the planned date."],
+    ["PR Number / PO Number are optional. If the PO or PR exists in D365, the dashboard fills the PO Issue actual date for you."],
+    ["Delete the example row before uploading."]];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([head, example]);
+  ws["!cols"] = head.map((h) => ({ wch: Math.max(14, h.length + 2) }));
+  XLSX.utils.book_append_sheet(wb, ws, "Procurement Plan");
+  const wn = XLSX.utils.aoa_to_sheet(notes); wn["!cols"] = [{ wch: 130 }];
+  XLSX.utils.book_append_sheet(wb, wn, "Notes");
+  XLSX.writeFile(wb, "CIMMYT_Procurement_Plan_Template.xlsx");
+}
+async function uploadPlan(file) {
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+    const name = wb.SheetNames.find((n) => /plan/i.test(n)) || wb.SheetNames[0];
+    const { rows, skipped } = parsePlanRows(XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: "" }));
+    PLAN = rows; planSource = file.name; store.set("plan", PLAN); store.set("planSource", planSource);
+    render();
+    toast(`Plan loaded: ${rows.length} items from ${file.name}` + (skipped ? ` (${skipped} rows skipped: ICC or granted date missing)` : "") + ". Saved in this browser only.");
+  } catch (e) { toast("Plan upload failed: " + e.message); }
+}
+function loadSamplePlan() {
+  const iccs = tally(PO, (r) => r.icc + "|" + r.country).slice(0, 12).map(([k]) => k.split("|"));
+  const base = iccs.length ? iccs : [["A0000.01", "India"], ["A0000.02", "Bangladesh"], ["A0000.03", "Nepal"], ["A0000.04", "Pakistan"]];
+  const items = ["Field equipment", "Lab consumables", "Training venue and logistics", "Consultancy study", "IT equipment", "Seed and inputs"];
+  const methods = ["Request for Quotation", "Invitation to Bid", "Request for Proposal", "Framework agreement"];
+  PLAN = base.map(([icc, country], i) => {
+    const granted = addDays(TODAY, -(8 + i * 11));
+    const p = { icc, project: "Sample " + icc.split(".")[0], country, item: items[i % items.length], category: "", method: methods[i % methods.length], value: 4000 + i * 3500, owner: "", granted,
+      torP: null, torA: null, tenderP: null, tenderA: null, vendorP: null, vendorA: null, poP: null, poA: null, prNo: "", poNo: "" };
+    const done = i % 4; // 0..3 stages completed
+    if (done >= 1) p.torA = addDays(granted, 13 + (i % 3) * 4);
+    if (done >= 2) p.tenderA = addDays(granted, 31);
+    if (done >= 3) p.vendorA = addDays(granted, 58);
+    ["torA", "tenderA", "vendorA"].forEach((k) => { if (p[k] && p[k] > TODAY) p[k] = null; });
+    return p;
+  });
+  planSource = "Sample plan (invented rows)"; store.set("plan", PLAN); store.set("planSource", planSource);
+  render(); toast("Sample plan loaded. These rows are invented to show how the timeline works.");
+}
+
+/* ============================== UI building blocks ============================== */
+function chart(cfgObj) { const id = "ch" + pendingCharts.length; pendingCharts.push([id, cfgObj]); return `<div class="cv${cfgObj.tall ? " tall" : ""}"><canvas id="${id}" role="img" aria-label="${esc(cfgObj.aria || "Chart")}"></canvas></div>`; }
+function mountCharts() {
+  charts.forEach((c) => c.destroy()); charts = [];
+  Chart.defaults.font.family = '"DM Sans", Arial, sans-serif'; Chart.defaults.color = "#5d7489"; Chart.defaults.borderColor = "#e3edf2";
+  pendingCharts.forEach(([id, c]) => {
+    const el = $(id); if (!el) return;
+    c.options = Object.assign({ responsive: true, maintainAspectRatio: false }, c.options || {});
+    charts.push(new Chart(el, c));
+  });
+  pendingCharts = [];
+}
+const moneyTick = { ticks: { callback: (v) => money(v) } };
+function donut(pairs, colors, isMoney) {
+  return { type: "doughnut", data: { labels: pairs.map((p) => p[0]), datasets: [{ data: pairs.map((p) => p[1]), backgroundColor: colors, borderColor: "#fff", borderWidth: 2 }] },
+    options: { cutout: "58%", plugins: { legend: { position: "right", labels: { boxWidth: 10, font: { size: 11.5 } } }, tooltip: { callbacks: { label: (c) => { const t = c.dataset.data.reduce((a, b) => a + b, 0); return ` ${c.label}: ${isMoney ? money(c.parsed) : fmtInt(c.parsed)} (${pct(c.parsed, t)})`; } } } } } };
+}
+function pie(pairs, colors, isMoney) { const c = donut(pairs, colors, isMoney); c.type = "pie"; delete c.options.cutout; return c; }
+function topN(pairs, n) { if (pairs.length <= n) return pairs; const rest = pairs.slice(n - 1).reduce((s, p) => s + p[1], 0); return pairs.slice(0, n - 1).concat([["Other", rest]]); }
+function panel(title, hint, inner, cls = "") { return `<section class="panel ${cls}"><h2>${esc(title)}</h2><div class="hint">${esc(hint || "")}</div>${inner}</section>`; }
+function emptyState(title, detail) { return `<div class="empty"><b>${esc(title)}</b>${detail}</div>`; }
+function kpi(label, value, note, color, detail) {
+  const i = details.push(detail || null) - 1;
+  return `<button class="kpi ${color || ""}" data-detail="${i}" ${detail ? "" : 'style="cursor:default"'}><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(note || "")}</small></button>`;
+}
+function selectFilter(key, label, options) {
+  return `<label>${esc(label)}<select data-filter="${key}">${["All"].concat(options).map((o) => `<option${filters[key] === o ? " selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`;
+}
+function filterBar(only) {
+  if (!PO.length) return "";
+  if (only) return only.map((k) => selectFilter(k, k === "country" ? "Country" : "Project", uniq(PO, (r) => r[k]))).join("") + `<button class="btn small" id="clearFilters">Clear filters</button>`;
+  const rowsFor = (skip) => PO.filter((r) => Object.keys(filters).every((k) => k === skip || filters[k] === "All" || r[k === "category" ? "cat" : k] === filters[k]));
+  return selectFilter("country", "Country", uniq(rowsFor("country"), (r) => r.country)) + selectFilter("project", "Project", uniq(rowsFor("project"), (r) => r.project)) +
+    selectFilter("category", "Category", uniq(rowsFor("category"), (r) => r.cat)) + selectFilter("stage", "Stage", STAGES.filter((s) => rowsFor("stage").some((r) => r.stage === s))) +
+    selectFilter("buyer", "Procurement officer", uniq(rowsFor("buyer"), (r) => r.buyer)) + `<button class="btn small" id="clearFilters">Clear filters</button>`;
+}
+function filtered() { return PO.filter((r) => (filters.country === "All" || r.country === filters.country) && (filters.project === "All" || r.project === filters.project) && (filters.category === "All" || r.cat === filters.category) && (filters.stage === "All" || r.stage === filters.stage) && (filters.buyer === "All" || r.buyer === filters.buyer)); }
+const poCount = (rows) => new Set(rows.map((r) => r.po)).size;
+const isCommitted = (r) => ["PO open", "Received", "Invoiced"].includes(r.stage);
+const isPending = (r) => ["Draft", "In review", "Approved"].includes(r.stage);
+const isLate = (r) => r.stage === "PO open" && r.reqDel && r.reqDel < TODAY;
+const isLive = (r) => !["Cancelled", "Rejected"].includes(r.stage);
+const lateDays = (r) => diffDays(r.reqDel, TODAY);
+/** One object per purchase order, built from its lines. */
+function poGroups(rows) {
+  const m = new Map();
+  rows.forEach((r) => {
+    let g = m.get(r.po);
+    if (!g) m.set(r.po, (g = { po: r.po, date: r.date, country: r.country, vendor: r.vendor, stage: r.stage, buyer: r.buyer, pr: r.pr, usd: 0, inv: 0, lines: [], late: 0 }));
+    g.lines.push(r); g.usd += r.usd; g.inv += r.inv; if (isLate(r)) g.late++;
+  });
+  return [...m.values()];
+}
+const BANDS = [["Under $1K", 0, 1e3], ["$1K – $5K", 1e3, 5e3], ["$5K – $25K", 5e3, 25e3], ["$25K – $100K", 25e3, 1e5], ["Over $100K", 1e5, Infinity]];
+function hbar(pairs, color, aria, isMoney = true) {
+  return { type: "bar", tall: true, aria, data: { labels: pairs.map((p) => { const t = String(p[0]).replace(/^[A-Z]{2,6}\d{4,} - /, ""); return t.length > 26 ? t.slice(0, 25) + "…" : t; }), datasets: [{ data: pairs.map((p) => p[1]), backgroundColor: color, borderRadius: 5 }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + (isMoney ? money(c.parsed.x) : fmtInt(c.parsed.x)) } } }, scales: { x: isMoney ? moneyTick : { ticks: { precision: 0 } } } } };
+}
+function vbar(pairs, colors, aria, isMoney = false) {
+  return { type: "bar", aria, data: { labels: pairs.map((p) => p[0]), datasets: [{ data: pairs.map((p) => p[1]), backgroundColor: colors, borderRadius: 5 }] },
+    options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => " " + (isMoney ? money(c.parsed.y) : fmtInt(c.parsed.y)) } } }, scales: { y: isMoney ? moneyTick : { beginAtZero: true, ticks: { precision: 0 } } } } };
+}
+function stacked(labels, series, aria, isMoney = false) {
+  return { type: "bar", aria, data: { labels, datasets: series.map(([label, data, color]) => ({ label, data, backgroundColor: color, borderRadius: 3 })) },
+    options: { scales: { x: { stacked: true }, y: Object.assign({ stacked: true }, isMoney ? moneyTick : { ticks: { precision: 0 } }) }, plugins: { legend: { labels: { boxWidth: 10 } }, tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${isMoney ? money(c.parsed.y) : fmtInt(c.parsed.y)}` } } } } };
+}
+function insightList(items) { return `<ul class="alerts">${items.map(([c, t]) => `<li><i style="background:${c}"></i><span>${t}</span></li>`).join("")}</ul>`; }
+
+/* ---- Sortable, searchable, paged table ---- */
+const stagePill = (s) => `<span class="pill ${STAGE_PILL[s] || "grey"}">${esc(s)}</span>`;
+const PO_COLS = [
+  { label: "PO number", get: (r) => r.po }, { label: "Line", num: true, get: (r) => r.line }, { label: "Created", get: (r) => r.date, html: (r) => showDate(r.date) }, { label: "Country", get: (r) => r.country },
+  { label: "Item description", get: (r) => r.desc, cls: "wrap" }, { label: "Vendor", get: (r) => r.vendor }, { label: "ICC / Project ID", get: (r) => r.icc }, { label: "Category", get: (r) => r.cat },
+  { label: "Stage", get: (r) => r.stage, html: (r) => stagePill(r.stage) }, { label: "Requested delivery", get: (r) => r.reqDel, html: (r) => isLate(r) ? `<span class="pill red">${showDate(r.reqDel)} · ${lateDays(r)}d late</span>` : showDate(r.reqDel) },
+  { label: "Qty", num: true, get: (r) => r.qty }, { label: "Unit price", num: true, get: (r) => r.price, html: (r) => r.price == null ? "–" : fmtInt(r.price) },
+  { label: "Line amount", num: true, get: (r) => r.amtPO, html: (r) => r.amtPO == null ? "–" : `${fmtInt(r.amtPO)} ${esc(r.cur)}` }, { label: "USD (est.)", num: true, get: (r) => Math.round(r.usd), html: (r) => money(r.usd) },
+  { label: "Invoiced USD", num: true, get: (r) => Math.round(r.inv), html: (r) => r.inv ? money(r.inv) : "–" }, { label: "Procurement officer", get: (r) => r.buyer }, { label: "PR number", get: (r) => r.pr }
+];
+const PO_HEAD_COLS = [
+  { label: "PO number", get: (g) => g.po }, { label: "Created", get: (g) => g.date, html: (g) => showDate(g.date) }, { label: "Country", get: (g) => g.country }, { label: "Vendor", get: (g) => g.vendor },
+  { label: "Stage", get: (g) => g.stage, html: (g) => stagePill(g.stage) }, { label: "Lines", num: true, get: (g) => g.lines.length }, { label: "USD (est.)", num: true, get: (g) => Math.round(g.usd), html: (g) => money(g.usd) },
+  { label: "Invoiced USD", num: true, get: (g) => Math.round(g.inv), html: (g) => g.inv ? money(g.inv) : "–" }, { label: "Late lines", num: true, get: (g) => g.late, html: (g) => g.late ? `<span class="pill red">${g.late}</span>` : "0" },
+  { label: "Procurement officer", get: (g) => g.buyer }, { label: "PR number", get: (g) => g.pr }
+];
+const PR_COLS = [
+  { label: "PR number", get: (r) => r.id }, { label: "Created", get: (r) => r.created, html: (r) => showDate(r.created) }, { label: "Country", get: (r) => r.country },
+  { label: "Status", get: (r) => r.status, html: (r) => `<span class="pill ${/closed/i.test(r.status) ? "green" : /reject|cancel/i.test(r.status) ? "red" : /review/i.test(r.status) ? "orange" : "grey"}">${esc(r.status)}</span>` },
+  { label: "Pending days", num: true, get: (r) => r.age, html: (r) => r.age == null ? "–" : `<span class="pill ${r.age > Number(cfg.buffer) ? "red" : "orange"}">${r.age} d</span>` },
+  { label: "Description", get: (r) => r.desc, cls: "wrap" }, { label: "Requester", get: (r) => r.requester }, { label: "Program", get: (r) => r.program },
+  { label: "Justification", get: (r) => r.just }, { label: "PO number", get: (r) => r.po }, { label: "PR → PO days", num: true, get: (r) => r.lead, html: (r) => r.lead == null ? "–" : r.lead }
+];
+function tableBlock(id, rows, cols, opts = {}) {
+  const prev = tables[id] || {};
+  tables[id] = { rows, cols, sort: prev.sort ?? opts.sort ?? -1, dir: prev.dir ?? opts.dir ?? 1, page: prev.page || 1, q: prev.q || "", per: opts.per || 12, onRow: opts.onRow, file: opts.file || id + ".csv" };
+  return `<div class="panel-head" style="margin-top:6px">${opts.search === false ? "<span></span>" : `<input type="search" data-tsearch="${id}" placeholder="Search this table…" value="${esc(tables[id].q)}" aria-label="Search table" style="width:min(320px,100%)">`}
+    <button class="btn small" data-texport="${id}">Export CSV</button></div><div id="tb-${id}"></div>`;
+}
+function tableRows(t) {
+  let rows = t.rows;
+  if (t.q) { const q = t.q.toLowerCase(); rows = rows.filter((r) => t.cols.some((c) => String(c.get(r) ?? "").toLowerCase().includes(q))); }
+  if (t.sort >= 0) { const g = t.cols[t.sort].get; rows = rows.slice().sort((a, b) => { const x = g(a), y = g(b); if (x == null || x === "") return 1; if (y == null || y === "") return -1; return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y))) * t.dir; }); }
+  return rows;
+}
+function drawTable(id) {
+  const t = tables[id], el = $("tb-" + id); if (!t || !el) return;
+  const rows = tableRows(t), pages = Math.max(1, Math.ceil(rows.length / t.per)); t.page = Math.min(t.page, pages);
+  const slice = rows.slice((t.page - 1) * t.per, t.page * t.per); t.visible = slice;
+  el.innerHTML = !rows.length ? emptyState("No rows match", "Change the search or the filters.") :
+    `<div class="tablewrap"><table><thead><tr>${t.cols.map((c, i) => `<th class="sortable${c.num ? " n" : ""}" data-tsort="${id}:${i}" title="Sort">${esc(c.label)}${t.sort === i ? (t.dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
+    <tbody>${slice.map((r, i) => `<tr${t.onRow ? ` class="click" data-trow="${id}:${i}" tabindex="0"` : ""}>${t.cols.map((c) => `<td class="${c.num ? "n" : ""} ${c.cls || ""}">${c.html ? c.html(r) : esc(c.get(r) ?? "–")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <div class="pager"><span>${fmtInt(rows.length)} rows · page ${t.page} of ${pages}</span><span><button class="btn small" data-tpage="${id}:-1" ${t.page <= 1 ? "disabled" : ""}>Previous</button> <button class="btn small" data-tpage="${id}:1" ${t.page >= pages ? "disabled" : ""}>Next</button></span></div>`;
+}
+function openDetail(title, sub, bodyHtml, exporter) {
+  $("detailTitle").textContent = title; $("detailSub").textContent = sub || ""; $("detailBody").innerHTML = bodyHtml;
+  currentDetail = null; $("detailExport").style.display = "none"; // each table in the dialog has its own Export button
+  if (!$("detailDialog").open) $("detailDialog").showModal();
+}
+function openRowsDetail(d) {
+  const id = "detail";
+  delete tables[id];
+  openDetail(d.title, `${fmtInt(d.rows.length)} rows${d.note ? " · " + d.note : ""}`, tableBlock(id, d.rows, d.cols, { per: 10, onRow: d.onRow, file: d.file || "details.csv" }), () => exportCsv(d.file || "details.csv", tableRows(tables[id]), d.cols));
+  drawTable(id);
+}
+/** Opens one purchase order: header facts plus all of its lines. */
+function openPO(poNo) {
+  const lines = PO.filter((r) => r.po === poNo); if (!lines.length) return;
+  const h = lines[0], total = sum(lines, (r) => r.usd), inv = sum(lines, (r) => r.inv);
+  const f = [["Vendor", h.vendor], ["Country", h.country], ["Stage", h.stage], ["D365 status", h.status], ["Approval status", h.appr], ["Date created", showDate(h.date)],
+    ["PO total", h.poTotal == null ? "–" : `${fmtInt(h.poTotal)} ${h.cur}`], ["USD (est.)", money(total)], ["Invoiced USD", inv ? money(inv) : "–"], ["Last PO date", showDate(h.lastPO)], ["Last packing slip", showDate(h.lastPack)],
+    ["Procurement officer", h.buyer], ["Buyer code", h.buyerCode || "–"], ["Requester ID", h.requester || "–"], ["PR number", h.pr || "–"]];
+  const cols = [{ label: "Line", num: true, get: (r) => r.line }, { label: "Item description", get: (r) => r.desc, cls: "wrap" }, { label: "ICC / Project ID", get: (r) => r.icc }, { label: "Category", get: (r) => `${r.cat} (${r.catCode})` },
+    { label: "Qty", num: true, get: (r) => r.qty }, { label: "Unit price", num: true, get: (r) => r.price, html: (r) => r.price == null ? "–" : fmtInt(r.price) }, { label: "Line amount", num: true, get: (r) => r.amtPO, html: (r) => r.amtPO == null ? "–" : `${fmtInt(r.amtPO)} ${esc(r.cur)}` },
+    { label: "Invoiced qty", num: true, get: (r) => r.invQty }, { label: "Invoiced amount", num: true, get: (r) => r.amtInv, html: (r) => r.amtInv == null ? "–" : `${fmtInt(r.amtInv)} ${esc(r.cur)}` },
+    { label: "Requested delivery", get: (r) => r.reqDel, html: (r) => isLate(r) ? `<span class="pill red">${showDate(r.reqDel)} · ${lateDays(r)}d late</span>` : showDate(r.reqDel) }, { label: "Last invoice", get: (r) => r.lastInv, html: (r) => showDate(r.lastInv) },
+    { label: "Asset ID", get: (r) => r.asset }, { label: "CAPEX code", get: (r) => r.capex }];
+  delete tables.detail;
+  openDetail("Purchase order " + poNo, `${lines.length} line${lines.length > 1 ? "s" : ""}`, `<div class="dl">${f.map(([k, v]) => `<div><span>${esc(k)}</span>${esc(v)}</div>`).join("")}</div>` + tableBlock("detail", lines, cols, { per: 10, search: false, file: poNo + "-lines.csv" }),
+    () => exportCsv(poNo + "-lines.csv", lines, cols));
+  drawTable("detail");
+}
+const fileName = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, "-") + ".csv";
+const poDetail = (title, rows, note) => ({ title, rows, cols: PO_COLS, note, onRow: (r) => openPO(r.po), file: fileName(title) });
+const poHeadDetail = (title, groups, note) => ({ title, rows: groups, cols: PO_HEAD_COLS, note, onRow: (g) => openPO(g.po), file: fileName(title) });
+
+/* ============================== Pages ============================== */
+function needData() {
+  if (poLoading) return `<div class="loader" role="status"><div class="spinner" aria-hidden="true"></div><div>Please wait…</div></div>`;
+  return `<div class="loader" role="status"><div style="max-width:560px;text-align:center">${esc(loadError || "No data loaded.")}</div><button class="btn primary" id="retryBtn">Try again</button></div>`;
+}
+function monthSeries(rows) {
+  const months = uniq(rows.filter((r) => r.date), (r) => r.date.slice(0, 7));
+  const cs = uniq(rows, (r) => r.country);
+  return { type: "bar", aria: "PO value by month and country",
+    data: { labels: months.map((m) => MONTHS[+m.slice(5) - 1] + " " + m.slice(2, 4)), datasets: cs.map((c) => ({ label: c, data: months.map((m) => sum(rows.filter((r) => r.country === c && r.date && r.date.startsWith(m)), (r) => r.usd)), backgroundColor: COUNTRY_COLOR[c] || "#7b90a4", borderRadius: 3 })) },
+    options: { scales: { x: { stacked: true }, y: Object.assign({ stacked: true }, moneyTick) }, plugins: { legend: { labels: { boxWidth: 10 } }, tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${money(c.parsed.y)}` } } } } };
+}
+function overview() {
+  if (!PO.length) return needData();
+  const d = filtered(), live = d.filter(isLive), groups = poGroups(d), liveGroups = poGroups(live);
+  const committed = d.filter(isCommitted), invoicedLines = d.filter((r) => r.inv), notInv = committed.filter((r) => r.stage !== "Invoiced"), pend = d.filter(isPending), late = d.filter(isLate), rej = d.filter((r) => r.stage === "Rejected");
+  const credits = d.filter((r) => r.amtPO < 0), cycles = d.filter((r) => r.cycle != null).map((r) => r.cycle);
+  const committedUsd = sum(committed, (r) => r.usd), invUsd = sum(d, (r) => r.inv), liveUsd = sum(live, (r) => r.usd);
+  const plan = evaluatePlan(), planOver = plan.filter((p) => p.status === "Overdue"), planDue = plan.filter((p) => p.status === "Due (within buffer)");
+  const prs = PR.filter((r) => filters.country === "All" || r.country === filters.country), prOpen = prs.filter((r) => r.open), prLeads = prs.filter((r) => r.lead != null).map((r) => r.lead);
+  const byCountry = tally(live, (r) => r.country, (r) => r.usd), byStage = STAGES.map((s) => [s, d.filter((r) => r.stage === s).length]).filter((p) => p[1]);
+  const byCat = topN(tally(live, (r) => r.cat, (r) => r.usd), 8), byIcc = tally(live, (r) => r.icc, (r) => r.usd).slice(0, 10), byVendor = tally(live, (r) => r.vendor, (r) => r.usd);
+  const bands = BANDS.map(([l, a, b]) => { const g = liveGroups.filter((x) => x.usd >= a && x.usd < b); return { l, n: g.length, usd: sum(g, (x) => x.usd), g }; });
+  const cs = uniq(d, (r) => r.country), cyc = cs.map((c) => [c, Math.round(median(d.filter((r) => r.country === c && r.cycle != null).map((r) => r.cycle)) ?? 0)]);
+  const months = uniq(live.filter((r) => r.date), (r) => r.date.slice(0, 7));
+
+  const alerts = [];
+  if (planOver.length) alerts.push(["var(--red)", `<b>${planOver.length} plan item${planOver.length > 1 ? "s" : ""}</b> more than ${cfg.buffer} days past a planned stage date. See Procurement Plan.`]);
+  if (planDue.length) alerts.push(["var(--orange)", `<b>${planDue.length} plan item${planDue.length > 1 ? "s" : ""}</b> reached a planned stage date and are inside the ${cfg.buffer}-day buffer.`]);
+  if (late.length) alerts.push(["var(--red)", `<b>${fmtInt(late.length)} open PO lines</b> (${money(sum(late, (r) => r.usd))}) are past the requested delivery date. See Delivery & Invoicing.`]);
+  if (pend.length) alerts.push(["var(--orange)", `<b>${fmtInt(pend.length)} PO lines</b> (${money(sum(pend, (r) => r.usd))}) are still in draft, review or approval.`]);
+  if (prOpen.filter((r) => r.age > cfg.buffer).length) alerts.push(["var(--red)", `<b>${fmtInt(prOpen.filter((r) => r.age > cfg.buffer).length)} requisitions</b> have been open for more than ${cfg.buffer} days without a PO.`]);
+  if (rej.length) alerts.push(["var(--red)", `<b>${fmtInt(rej.length)} PO lines</b> have a rejected approval.`]);
+  if (!alerts.length) alerts.push(["var(--green)", "Nothing needs attention for the current filters."]);
+
+  const ins = [];
+  if (byVendor.length) ins.push(["var(--cyan)", `Largest vendor: <b>${esc(byVendor[0][0])}</b> with ${money(byVendor[0][1])}, ${pct(byVendor[0][1], liveUsd)} of PO value.`]);
+  if (byCat.length) ins.push(["var(--cyan)", `Largest category: <b>${esc(byCat[0][0])}</b>, ${pct(byCat[0][1], liveUsd)} of PO value.`]);
+  const big = liveGroups.slice().sort((a, b) => b.usd - a.usd)[0];
+  if (big) ins.push(["var(--cyan)", `Largest purchase order: <b>${esc(big.po)}</b> (${esc(big.vendor)}), ${money(big.usd)}.`]);
+  const small = bands[0];
+  if (liveGroups.length) ins.push(["var(--cyan)", `<b>${pct(small.n, liveGroups.length)}</b> of purchase orders are under $1,000 but carry only ${pct(small.usd, liveUsd)} of the value: candidates for framework agreements or bundled orders.`]);
+  if (months.length >= 2) { const v = (m) => sum(live.filter((r) => r.date && r.date.startsWith(m)), (r) => r.usd), a = v(months[months.length - 2]), b = v(months[months.length - 1]), lab = (m) => MONTHS[+m.slice(5) - 1] + " " + m.slice(0, 4);
+    ins.push(["var(--cyan)", `${lab(months[months.length - 1])} so far: <b>${money(b)}</b> against ${money(a)} in ${lab(months[months.length - 2])}${a ? ` (${b >= a ? "+" : ""}${Math.round(100 * (b - a) / a)}%)` : ""}.`]); }
+  const lateBy = tally(late, (r) => r.country);
+  if (lateBy.length) ins.push(["var(--orange)", `Most late lines: <b>${esc(lateBy[0][0])}</b> with ${lateBy[0][1]} of ${late.length}.`]);
+  if (credits.length) ins.push(["var(--grey)", `<b>${credits.length} line${credits.length > 1 ? "s" : ""}</b> carry a negative amount (credit notes or returns), ${money(sum(credits, (r) => r.usd))} in total.`]);
+
+  return `<div class="kpis">
+    ${kpi("Purchase orders", fmtInt(groups.length), `${fmtInt(d.length)} lines`, "", poHeadDetail("All purchase orders", groups))}
+    ${kpi("Committed value", money(committedUsd), "Confirmed POs, USD est.", "navy", poDetail("Committed PO lines", committed))}
+    ${kpi("Invoiced value", money(invUsd), pct(invUsd, committedUsd) + " of committed", "green", poDetail("Invoiced PO lines", invoicedLines))}
+    ${kpi("Not yet invoiced", money(sum(notInv, (r) => r.usd)), `${fmtInt(notInv.length)} confirmed lines open or received`, "", poDetail("Confirmed lines not yet invoiced", notInv))}
+    ${kpi("Awaiting approval", fmtInt(pend.length), "Lines in draft, review, approved", "orange", poDetail("PO lines awaiting approval", pend))}
+    ${kpi("Past delivery date", fmtInt(late.length), money(sum(late, (r) => r.usd)) + " on open lines", "red", poDetail("Open PO lines past requested delivery", late))}
+    ${kpi("PO → invoice", cycles.length ? Math.round(median(cycles)) + " days" : "–", `Median over ${fmtInt(cycles.length)} invoiced lines`, "navy")}
+    ${kpi("Open requisitions", prState === "ready" ? fmtInt(prOpen.length) : prState === "loading" ? "…" : "–", prState === "ready" ? `${fmtInt(prOpen.filter((r) => r.age > cfg.buffer).length)} open over ${cfg.buffer} days` : prState === "loading" ? "Loading requisitions" : "Not loaded", "orange")}
+    ${kpi("PR → PO", prLeads.length ? Math.round(median(prLeads)) + " days" : prState === "loading" ? "…" : "–", prLeads.length ? `Median over ${fmtInt(prLeads.length)} requisitions` : "Requisition to purchase order", "navy")}
+    ${kpi("Vendors", fmtInt(uniq(live, (r) => r.vendor).length), `${fmtInt(uniq(live, (r) => r.icc).length)} ICCs · ${fmtInt(uniq(live, (r) => r.cat).length)} categories`, "")}
+    ${kpi("Average PO value", money(liveUsd / (liveGroups.length || 1)), "USD estimate per purchase order", "")}
+    ${kpi("Plan items overdue", PLAN.length ? fmtInt(planOver.length) : "–", PLAN.length ? `of ${plan.length} plan items` : "No plan uploaded", PLAN.length && planOver.length ? "red" : "")}
+  </div>
+  <div class="grid">
+    ${panel("PO lines by stage", "Where every line stands today", chart(Object.assign(donut(byStage, byStage.map((p) => STAGE_COLOR[p[0]])), { aria: "PO lines by stage" })))}
+    ${panel("PO value by country", "USD estimate, excluding rejected and cancelled", chart(Object.assign(pie(byCountry, byCountry.map((p) => COUNTRY_COLOR[p[0]] || "#7b90a4"), true), { aria: "PO value by country" })))}
+    ${panel("PO value by month", "By creation date, stacked by country", chart(monthSeries(live)))}
+    ${panel("Spend by category", "Top categories by USD estimate", chart(Object.assign(donut(byCat, PALETTE, true), { aria: "Spend by category" })))}
+    ${panel("Purchase orders by size", "Number of purchase orders in each value band", chart(Object.assign(vbar(bands.map((b) => [b.l, b.n]), "#0e7d8d", "Purchase orders by size"), { options: { plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${fmtInt(c.parsed.y)} POs · ${money(bands[c.dataIndex].usd)}` } } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } })))}
+    ${panel("Top 10 ICCs by value", "USD estimate", chart(hbar(byIcc, "#0798d4", "Top ICCs by value")))}
+    ${panel("Days from PO to invoice", "Median per country, invoiced lines only", chart(vbar(cyc, cyc.map((p) => COUNTRY_COLOR[p[0]] || "#7b90a4"), "Median days from PO to invoice by country")))}
+    ${panel("Key insights", "Worked out from the loaded data", insightList(ins))}
+    ${panel("Needs attention", "From purchase orders, requisitions and the uploaded plan", insightList(alerts))}
+    ${panel("Country summary", "Click a column heading to sort", tableBlock("country", cs.map((c) => { const a = d.filter((r) => r.country === c), cm = a.filter(isCommitted), cy = a.filter((r) => r.cycle != null).map((r) => r.cycle); return { c, pos: poCount(a), lines: a.length, usd: sum(cm, (r) => r.usd), inv: sum(a, (r) => r.inv), open: a.filter((r) => r.stage === "PO open").length, late: a.filter(isLate).length, vendors: uniq(a, (r) => r.vendor).length, cyc: cy.length ? Math.round(median(cy)) : null }; }),
+      [{ label: "Country", get: (r) => r.c }, { label: "POs", num: true, get: (r) => r.pos }, { label: "Lines", num: true, get: (r) => r.lines }, { label: "Committed USD", num: true, get: (r) => Math.round(r.usd), html: (r) => money(r.usd) }, { label: "Invoiced USD", num: true, get: (r) => Math.round(r.inv), html: (r) => money(r.inv) }, { label: "Invoiced %", num: true, get: (r) => r.usd ? Math.round(100 * r.inv / r.usd) : 0, html: (r) => pct(r.inv, r.usd) },
+       { label: "Open lines", num: true, get: (r) => r.open }, { label: "Past delivery", num: true, get: (r) => r.late, html: (r) => r.late ? `<span class="pill red">${r.late}</span>` : "0" }, { label: "Vendors", num: true, get: (r) => r.vendors }, { label: "PO → invoice days", num: true, get: (r) => r.cyc, html: (r) => r.cyc ?? "–" }], { search: false, sort: 3, dir: -1 }), "wide")}
+  </div><p class="note">${esc(rateNote())}</p>`;
+}
+function ordersPage() {
+  if (!PO.length) return needData();
+  const d = filtered(), groups = poGroups(d);
+  return `<div class="kpis">
+    ${kpi("Purchase orders", fmtInt(groups.length), `${fmtInt(d.length)} lines`, "", poHeadDetail("All purchase orders", groups))}
+    ${kpi("Value", money(sum(d, (r) => r.usd)), "USD estimate, all stages", "navy")}
+    ${kpi("Past delivery date", fmtInt(d.filter(isLate).length), "Open lines", "red", poDetail("Open PO lines past requested delivery", d.filter(isLate)))}
+    ${kpi("Awaiting approval", fmtInt(d.filter(isPending).length), "Draft, in review, approved", "orange", poDetail("PO lines awaiting approval", d.filter(isPending)))}
+    ${kpi("Fixed asset lines", fmtInt(d.filter((r) => r.asset || r.capex).length), "Lines with an asset ID or CAPEX code", "", poDetail("Fixed asset and CAPEX lines", d.filter((r) => r.asset || r.capex)))}
+    ${kpi("Credit lines", fmtInt(d.filter((r) => r.amtPO < 0).length), "Negative amounts: credits or returns", "", poDetail("Credit and return lines", d.filter((r) => r.amtPO < 0)))}
+  </div>
+  <div class="grid">
+    ${panel("Purchase orders", "One row per purchase order, newest first. Click a row to see its lines.", tableBlock("poheads", groups.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))), PO_HEAD_COLS, { onRow: (g) => openPO(g.po), per: 10, file: "purchase-orders.csv" }), "wide")}
+    ${panel("Purchase order lines", "Late lines first. Click a row to open its purchase order.", `<div style="text-align:right"><button class="btn small" id="rawCsvBtn" title="The D365 report exactly as received, all columns and countries">Download original report (CSV)</button></div>` + tableBlock("orders", d.slice().sort((a, b) => isLate(b) - isLate(a) || String(b.date).localeCompare(String(a.date))), PO_COLS, { onRow: (r) => openPO(r.po), per: 15, file: "purchase-order-lines.csv" }), "wide")}
+  </div>`;
+}
+function deliveryPage() {
+  if (!PO.length) return needData();
+  const d = filtered(), open = d.filter((r) => r.stage === "PO open"), late = open.filter(isLate), soon = open.filter((r) => r.reqDel && r.reqDel >= TODAY && diffDays(TODAY, r.reqDel) <= 14);
+  const received = d.filter((r) => r.stage === "Received"), cyc = d.filter((r) => r.cycle != null);
+  const lb = [["1–7 days", 1, 7], ["8–15 days", 8, 15], ["16–30 days", 16, 30], ["Over 30 days", 31, 1e9]].map(([l, a, b]) => [l, late.filter((r) => lateDays(r) >= a && lateDays(r) <= b).length]);
+  const cb = [["0–7 days", 0, 7], ["8–15 days", 8, 15], ["16–30 days", 16, 30], ["31–60 days", 31, 60], ["Over 60 days", 61, 1e9]].map(([l, a, b]) => [l, cyc.filter((r) => r.cycle >= a && r.cycle <= b).length]);
+  const cs = uniq(d, (r) => r.country), months = uniq(d.filter((r) => r.date && isCommitted(r)), (r) => r.date.slice(0, 7));
+  const inMonth = (m, f) => sum(d.filter((r) => isCommitted(r) && r.date && r.date.startsWith(m)), f);
+  const lateVendors = tally(late, (r) => r.vendor).slice(0, 8);
+  const lateCols = [{ label: "Days late", num: true, get: (r) => lateDays(r), html: (r) => `<span class="pill ${lateDays(r) > cfg.buffer ? "red" : "orange"}">${lateDays(r)} d</span>` }].concat(PO_COLS);
+  const soonCols = [{ label: "Due in", num: true, get: (r) => diffDays(TODAY, r.reqDel), html: (r) => `${diffDays(TODAY, r.reqDel)} d` }].concat(PO_COLS);
+  return `<div class="kpis">
+    ${kpi("Open lines", fmtInt(open.length), money(sum(open, (r) => r.usd)) + " awaiting delivery", "", poDetail("Open PO lines", open))}
+    ${kpi("Past delivery date", fmtInt(late.length), money(sum(late, (r) => r.usd)) + " · " + pct(late.length, open.length) + " of open lines", "red", poDetail("Open PO lines past requested delivery", late))}
+    ${kpi(`Late over ${cfg.buffer} days`, fmtInt(late.filter((r) => lateDays(r) > cfg.buffer).length), "Past the buffer", "red", poDetail("Lines late beyond the buffer", late.filter((r) => lateDays(r) > cfg.buffer)))}
+    ${kpi("Due in 14 days", fmtInt(soon.length), money(sum(soon, (r) => r.usd)) + " expected", "orange", poDetail("Lines due in the next 14 days", soon))}
+    ${kpi("Received, not invoiced", fmtInt(received.length), money(sum(received, (r) => r.usd)) + " awaiting invoice", "", poDetail("Received lines awaiting invoice", received))}
+    ${kpi("PO → invoice", cyc.length ? Math.round(median(cyc.map((r) => r.cycle))) + " days" : "–", `Median over ${fmtInt(cyc.length)} invoiced lines`, "navy")}
+  </div>
+  <div class="grid">
+    ${panel("How late are the open lines?", `Days past the requested delivery date. Orange up to ${cfg.buffer} days, red after.`, chart(vbar(lb, ["#f59b22", "#f59b22", "#e5484d", "#e5484d"], "Late open lines by days late")))}
+    ${panel("Open lines by country", "On time against past the requested delivery date", chart(stacked(cs, [["On time", cs.map((c) => open.filter((r) => r.country === c && !isLate(r)).length), "#9fb3c2"], ["Past delivery date", cs.map((c) => late.filter((r) => r.country === c).length), "#e5484d"]], "Open lines by country")))}
+    ${panel("Time from PO to invoice", "Number of invoiced lines by days taken", chart(vbar(cb, "#0e7d8d", "Invoiced lines by days from PO to invoice")))}
+    ${panel("Committed against invoiced, by month", "By PO creation month, USD", chart({ type: "bar", aria: "Committed and invoiced value by month", data: { labels: months.map((m) => MONTHS[+m.slice(5) - 1] + " " + m.slice(2, 4)), datasets: [{ label: "Committed (est.)", data: months.map((m) => inMonth(m, (r) => r.usd)), backgroundColor: "#9fb3c2", borderRadius: 3 }, { label: "Invoiced", data: months.map((m) => inMonth(m, (r) => r.inv)), backgroundColor: "#0c3554", borderRadius: 3 }] }, options: { scales: { y: moneyTick }, plugins: { legend: { labels: { boxWidth: 10 } }, tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${money(c.parsed.y)}` } } } } }))}
+    ${panel("Vendors with the most late lines", "Open lines past the requested delivery date", lateVendors.length ? chart(hbar(lateVendors, "#e5484d", "Vendors with the most late lines", false)) : emptyState("No late lines", ""))}
+    ${panel("Late deliveries", "Longest overdue first. Click a row to open the purchase order.", tableBlock("late", late.slice().sort((a, b) => lateDays(b) - lateDays(a)), lateCols, { onRow: (r) => openPO(r.po), per: 10, file: "late-deliveries.csv" }), "wide")}
+    ${panel("Due in the next 14 days", "Soonest first", tableBlock("soon", soon.slice().sort((a, b) => a.reqDel.localeCompare(b.reqDel)), soonCols, { onRow: (r) => openPO(r.po), per: 10, file: "due-next-14-days.csv" }), "wide")}
+  </div><p class="note">The report has no goods-received date, so lateness is measured for lines still open today against their requested delivery date.</p>`;
+}
+function projectsPage() {
+  if (!PO.length) return needData();
+  const d = filtered().filter(isLive), total = sum(d, (r) => r.usd);
+  const group = (keyFn) => { const m = new Map(); d.forEach((r) => { const k = keyFn(r) || "Not set"; (m.get(k) || m.set(k, []).get(k)).push(r); }); return [...m.entries()].map(([k, a]) => ({ k, rows: a, project: a[0].project, pos: poCount(a), lines: a.length, usd: sum(a, (r) => r.usd), inv: sum(a, (r) => r.inv), open: a.filter((r) => r.stage === "PO open").length, late: a.filter(isLate).length, vendors: uniq(a, (r) => r.vendor).length, countries: uniq(a, (r) => r.country).join(", ") })); };
+  const projects = group((r) => r.project).sort((a, b) => b.usd - a.usd), iccs = group((r) => r.icc).sort((a, b) => b.usd - a.usd);
+  const top = projects.slice(0, 8), cs = uniq(d, (r) => r.country);
+  const cols = (label, withProject) => [{ label, get: (r) => r.k }].concat(withProject ? [{ label: "Project", get: (r) => r.project }] : []).concat([{ label: "Countries", get: (r) => r.countries }, { label: "POs", num: true, get: (r) => r.pos }, { label: "Lines", num: true, get: (r) => r.lines },
+    { label: "Value USD (est.)", num: true, get: (r) => Math.round(r.usd), html: (r) => money(r.usd) }, { label: "Share", num: true, get: (r) => r.usd, html: (r) => pct(r.usd, total) }, { label: "Invoiced USD", num: true, get: (r) => Math.round(r.inv), html: (r) => money(r.inv) }, { label: "Invoiced %", num: true, get: (r) => r.usd ? Math.round(100 * r.inv / r.usd) : 0, html: (r) => pct(r.inv, r.usd) },
+    { label: "Open lines", num: true, get: (r) => r.open }, { label: "Past delivery", num: true, get: (r) => r.late, html: (r) => r.late ? `<span class="pill red">${r.late}</span>` : "0" }, { label: "Vendors", num: true, get: (r) => r.vendors }]);
+  const drill = (label) => (g) => openRowsDetail(poDetail(`${label} ${g.k}`, g.rows));
+  return `<div class="kpis">
+    ${kpi("Projects", fmtInt(projects.length), "Project codes with a live PO line", "")}
+    ${kpi("ICCs", fmtInt(iccs.length), "Cost centres charged", "")}
+    ${kpi("Largest project", projects[0] ? projects[0].k : "–", projects[0] ? `${money(projects[0].usd)} · ${pct(projects[0].usd, total)} of value` : "", "navy")}
+    ${kpi("Top 3 project share", pct(sum(projects.slice(0, 3), (p) => p.usd), total), "Share of PO value", "")}
+    ${kpi("ICCs with late lines", fmtInt(iccs.filter((i) => i.late).length), "At least one open line past delivery", "red")}
+  </div>
+  <div class="grid">
+    ${panel("Value by project", "USD estimate, share of all live PO lines", chart(Object.assign(pie(topN(projects.map((p) => [p.k, p.usd]), 8), PALETTE, true), { aria: "Value by project" })))}
+    ${panel("Top projects by country", "USD estimate", chart(stacked(top.map((p) => p.k), cs.map((c) => [c, top.map((p) => sum(p.rows.filter((r) => r.country === c), (r) => r.usd)), COUNTRY_COLOR[c] || "#7b90a4"]), "Top projects by country", true)))}
+    ${panel("Committed against invoiced", "Top projects, USD", chart({ type: "bar", aria: "Committed and invoiced by project", data: { labels: top.map((p) => p.k), datasets: [{ label: "Committed (est.)", data: top.map((p) => p.usd), backgroundColor: "#9fb3c2", borderRadius: 3 }, { label: "Invoiced", data: top.map((p) => p.inv), backgroundColor: "#0c3554", borderRadius: 3 }] }, options: { scales: { y: moneyTick }, plugins: { legend: { labels: { boxWidth: 10 } }, tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${money(c.parsed.y)}` } } } } }))}
+    ${panel("Projects", "Click a project to see its PO lines.", tableBlock("projects", projects, cols("Project", false), { sort: 4, dir: -1, onRow: drill("Project"), file: "projects.csv" }), "wide")}
+    ${panel("ICC / Project ID", "Click an ICC to see its PO lines.", tableBlock("iccs", iccs, cols("ICC", true), { sort: 5, dir: -1, onRow: drill("ICC"), file: "iccs.csv" }), "wide")}
+  </div>`;
+}
+function reqsPage() {
+  if (!PO.length && prState === "idle") return needData();
+  if (prState === "idle" || prState === "loading") return `<div class="loader" role="status"><div class="spinner" aria-hidden="true"></div><div>Please wait…</div></div>`;
+  if (prState === "error") return `<div class="loader" role="status"><div style="max-width:560px;text-align:center">${esc(prError)}</div><button class="btn primary" id="loadPrBtn">Try again</button></div>`;
+  const base = PR.filter((r) => filters.country === "All" || r.country === filters.country);
+  const d = base.filter((r) => (prFilters.status === "All" || r.status === prFilters.status) && (prFilters.program === "All" || r.program === prFilters.program));
+  const open = d.filter((r) => r.open), delayed = open.filter((r) => r.age > cfg.buffer), withLead = d.filter((r) => r.lead != null), leads = withLead.map((r) => r.lead);
+  const prDetail = (title, rows) => ({ title, rows, cols: PR_COLS, file: fileName(title) });
+  const byStatus = tally(d, (r) => r.status), statusColor = (s) => /closed/i.test(s) ? "#6fbf3a" : /review/i.test(s) ? "#f59b22" : /reject/i.test(s) ? "#e5484d" : /approved/i.test(s) ? "#5b6fd6" : /cancel/i.test(s) ? "#8a9bab" : "#b9c6d0";
+  const buckets = [["0–7 days", 0, 7], ["8–15 days", 8, 15], ["16–30 days", 16, 30], ["Over 30 days", 31, 1e9]].map(([l, a, b]) => [l, open.filter((r) => r.age >= a && r.age <= b).length]);
+  const cs = uniq(d, (r) => r.country), sts = byStatus.map((p) => p[0]), months = uniq(d.filter((r) => r.created), (r) => r.created.slice(0, 7));
+  const leadBy = cs.map((c) => [c, Math.round(median(withLead.filter((r) => r.country === c).map((r) => r.lead)) ?? 0)]);
+  const byProgram = tally(d, (r) => r.program).slice(0, 10), byJust = tally(d, (r) => r.just), byReq = tally(d, (r) => r.requester).slice(0, 10);
+  const sel = (key, label, opts) => `<label style="display:grid;gap:3px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">${label}<select data-prfilter="${key}">${["All"].concat(opts).map((o) => `<option${prFilters[key] === o ? " selected" : ""}>${esc(o)}</option>`).join("")}</select></label>`;
+  return `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">${sel("status", "Requisition status", uniq(base, (r) => r.status))}${sel("program", "Program", uniq(base, (r) => r.program))}</div>
+  <div class="kpis">
+    ${kpi("Requisitions", fmtInt(d.length), "Created in the selected dates", "", prDetail("All requisitions", d))}
+    ${kpi("Open", fmtInt(open.length), "Draft, in review or approved, no PO yet", "orange", prDetail("Open requisitions", open))}
+    ${kpi(`Pending over ${cfg.buffer} days`, fmtInt(delayed.length), "Open requisitions past the buffer", "red", prDetail("Delayed requisitions", delayed))}
+    ${kpi("Converted to PO", fmtInt(d.filter((r) => r.po).length), pct(d.filter((r) => r.po).length, d.length) + " of requisitions", "green", prDetail("Requisitions with a PO", d.filter((r) => r.po)))}
+    ${kpi("Median PR → PO", leads.length ? Math.round(median(leads)) + " days" : "–", `${fmtInt(leads.length)} requisitions matched to a PO`, "navy", prDetail("Requisitions matched to a PO", withLead))}
+    ${kpi("Slowest PR → PO", leads.length ? Math.max(...leads) + " days" : "–", "Longest conversion in view", "")}
+    ${kpi("Rejected", fmtInt(d.filter((r) => /reject/i.test(r.status)).length), pct(d.filter((r) => /reject/i.test(r.status)).length, d.length) + " of requisitions", "red", prDetail("Rejected requisitions", d.filter((r) => /reject/i.test(r.status))))}
+    ${kpi("Requesters", fmtInt(uniq(d, (r) => r.requester).length), `${fmtInt(uniq(d, (r) => r.program).length)} programs`, "")}
+  </div>
+  <div class="grid">
+    ${panel("Requisitions by status", "", chart(Object.assign(pie(byStatus, byStatus.map((p) => statusColor(p[0]))), { aria: "Requisitions by status" })))}
+    ${panel("Open requisitions by age", `Days since creation. Orange up to ${cfg.buffer} days, red after.`, chart(vbar(buckets, ["#f59b22", "#f59b22", "#e5484d", "#e5484d"], "Open requisitions by age")))}
+    ${panel("Status by country", "", chart(stacked(cs, sts.map((s) => [s, cs.map((c) => d.filter((r) => r.country === c && r.status === s).length), statusColor(s)]), "Requisition status by country")))}
+    ${panel("Created and converted, by month", "Requisitions created, and how many of them have a PO", chart({ type: "bar", aria: "Requisitions created and converted by month", data: { labels: months.map((m) => MONTHS[+m.slice(5) - 1] + " " + m.slice(2, 4)), datasets: [{ label: "Created", data: months.map((m) => d.filter((r) => r.created && r.created.startsWith(m)).length), backgroundColor: "#9fb3c2", borderRadius: 3 }, { label: "Converted to PO", data: months.map((m) => d.filter((r) => r.created && r.created.startsWith(m) && r.po).length), backgroundColor: "#6fbf3a", borderRadius: 3 }] }, options: { scales: { y: { ticks: { precision: 0 } } }, plugins: { legend: { labels: { boxWidth: 10 } } } } }))}
+    ${panel("Days from requisition to PO", "Median per country", chart(vbar(leadBy, leadBy.map((p) => COUNTRY_COLOR[p[0]] || "#7b90a4"), "Median days from requisition to PO by country")))}
+    ${panel("Business justification", "", chart(Object.assign(donut(byJust, PALETTE), { aria: "Requisitions by business justification" })))}
+    ${panel("Requisitions by program", "Top 10", chart(hbar(byProgram, "#0798d4", "Requisitions by program", false)))}
+    ${panel("Most active requesters", "Top 10 by number of requisitions", chart(hbar(byReq, "#0e7d8d", "Most active requesters", false)))}
+    ${panel("Requisition register", "Open and oldest first. The Country filter and the two filters above apply here.", tableBlock("reqs", d.slice().sort((a, b) => (b.age ?? -1) - (a.age ?? -1)), PR_COLS, { per: 15, file: "requisitions.csv" }), "wide")}
+  </div>`;
+}
+function stageChip(s) {
+  const line = s.state === "done" ? `Done ${showDate(s.actual)}${s.late ? ` · ${s.late}d late` : ""}${s.fromD365 ? " · D365" : ""}` : s.state === "upcoming" ? `In ${s.daysLeft} d` : s.state === "due" ? `Due · day ${s.over} of ${cfg.buffer}` : `${s.over} d overdue`;
+  return `<span class="stage ${s.state}" title="${esc(s.label)}: planned ${showDate(s.planned)}${s.predicted ? " (predicted)" : ""}"><b>${showDate(s.planned)}${s.predicted ? " *" : ""}</b>${esc(line)}</span>`;
+}
+function planPage() {
+  const tools = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+    <button class="btn primary" id="planUpload">Upload procurement plan (Excel / CSV)</button><button class="btn" id="planTemplate">Download template</button>
+    ${PLAN.length ? '<button class="btn" id="planClear">Remove plan</button>' : '<button class="btn" id="planSample">Show a sample plan</button>'}</div>`;
+  if (!PLAN.length) return tools + `<div class="grid">${panel("Procurement plan against ICC", "", emptyState("No plan uploaded yet",
+    `<p>Upload one row per planned procurement with its ICC and the date the project was granted.</p>
+     <p>The dashboard then shows the expected date for each stage: Project granted → TOR → Tender float → Vendor onboard → PO issue.</p>
+     <p>A stage turns <span class="pill orange">orange</span> on its planned date and <span class="pill red">red</span> ${cfg.buffer} days later if it is still not done.</p>`), "wide")}</div>`;
+  const all = evaluatePlan();
+  const d = all.filter((p) => (filters.country === "All" || p.country === filters.country) && (filters.project === "All" || p.icc.split(".")[0] === filters.project || p.project === filters.project));
+  const by = (s) => d.filter((p) => p.status === s);
+  const statuses = Object.keys(PLAN_COLOR), pairs = statuses.map((s) => [s, by(s).length]).filter((p) => p[1]);
+  const stageNames = PLAN_STAGES.slice(1).map((s) => s[1]);
+  const cs = uniq(d, (p) => p.country || "Not set");
+  const cols = [{ label: "ICC", get: (p) => p.icc }, { label: "Project", get: (p) => p.project }, { label: "Country", get: (p) => p.country }, { label: "Item", get: (p) => p.item, cls: "wrap" },
+    { label: "Status", get: (p) => statuses.indexOf(p.status), html: (p) => `<span class="pill ${{ Completed: "green", "On track": "grey", "Due (within buffer)": "orange", Overdue: "red" }[p.status]}">${esc(p.status)}</span>`, csv: (p) => p.status },
+    { label: "Current stage", get: (p) => p.currentLabel }]
+    .concat(PLAN_STAGES.map(([k, l], i) => ({ label: l, get: (p) => p.stages[i].planned, html: (p) => stageChip(p.stages[i]), csv: (p) => `${p.stages[i].planned} (${p.stages[i].state}${p.stages[i].actual ? ", actual " + p.stages[i].actual : ""})` })))
+    .concat([{ label: "Est. USD", num: true, get: (p) => p.value, html: (p) => p.value == null ? "–" : money(p.value) }, { label: "Method", get: (p) => p.method }, { label: "Responsible", get: (p) => p.owner }]);
+  const pd = (title, rows) => ({ title, rows, cols, file: "plan-items.csv" });
+  return tools + `<div class="kpis">
+    ${kpi("Plan items", fmtInt(d.length), planSource, "", pd("All plan items", d))}
+    ${kpi("On track", fmtInt(by("On track").length), "Next stage date not reached", "", pd("On track", by("On track")))}
+    ${kpi("Due", fmtInt(by("Due (within buffer)").length), `Planned date reached, within ${cfg.buffer} days`, "orange", pd("Due within buffer", by("Due (within buffer)")))}
+    ${kpi("Overdue", fmtInt(by("Overdue").length), `More than ${cfg.buffer} days past plan`, "red", pd("Overdue", by("Overdue")))}
+    ${kpi("Completed", fmtInt(by("Completed").length), "PO issued", "green", pd("Completed", by("Completed")))}
+    ${kpi("Planned value", money(sum(d, (p) => p.value)), "Estimated USD", "navy")}
+  </div>
+  <div class="grid">
+    ${panel("Plan status", "Each item is coloured by its current stage", chart(Object.assign(pie(pairs, pairs.map((p) => PLAN_COLOR[p[0]])), { aria: "Plan items by status" })))}
+    ${panel("Where items are waiting", "Current stage of items that are not complete", chart({ type: "bar", aria: "Current stage by status", data: { labels: stageNames, datasets: statuses.slice(1).map((s) => ({ label: s, data: stageNames.map((n) => d.filter((p) => p.status === s && p.currentLabel === n).length), backgroundColor: PLAN_COLOR[s], borderRadius: 3 })) }, options: { scales: { x: { stacked: true }, y: { stacked: true, ticks: { precision: 0 } } }, plugins: { legend: { labels: { boxWidth: 10 } } } } }))}
+    ${panel("Status by country", "", chart({ type: "bar", aria: "Plan status by country", data: { labels: cs, datasets: statuses.map((s) => ({ label: s, data: cs.map((c) => d.filter((p) => (p.country || "Not set") === c && p.status === s).length), backgroundColor: PLAN_COLOR[s], borderRadius: 3 })) }, options: { scales: { x: { stacked: true }, y: { stacked: true, ticks: { precision: 0 } } }, plugins: { legend: { labels: { boxWidth: 10 } } } } }))}
+    ${panel("Stage timeline by ICC", "Overdue first. Each cell shows the planned date and where the stage stands today.", tableBlock("plan", d.slice().sort((a, b) => statuses.indexOf(b.status) - statuses.indexOf(a.status)), cols, { per: 12, file: "procurement-plan-timeline.csv" }) +
+      `<div class="legend"><span><i style="background:#e3f4d9"></i>Done</span><span><i style="background:#eef3f6"></i>Planned date not reached</span><span><i style="background:#fdeed5"></i>Planned date reached, inside ${cfg.buffer}-day buffer</span><span><i style="background:#fde0e1"></i>More than ${cfg.buffer} days past plan</span><span>* predicted from the project granted date (TOR +${cfg.tor}, Tender +${cfg.tender}, Vendor +${cfg.vendor}, PO +${cfg.po} days)</span></div>`, "wide")}
+  </div>`;
+}
+function periodsPage() {
+  if (!PO.length) return needData();
+  const d = filtered().filter((r) => r.date && isLive(r));
+  const years = uniq(d, (r) => r.date.slice(0, 4));
+  if (periodYear !== "All" && !years.includes(periodYear)) periodYear = "All";
+  const scoped = periodYear === "All" ? d : d.filter((r) => r.date.startsWith(periodYear));
+  const keyOf = (r) => periodMode === "Yearly" ? r.date.slice(0, 4) : `${r.date.slice(0, 4)} ${quarterOf(r.date)}`;
+  const periods = uniq(scoped, keyOf), cs = uniq(scoped, (r) => r.country);
+  const rows = periods.map((p) => { const a = scoped.filter((r) => keyOf(r) === p), cy = a.filter((r) => r.cycle != null).map((r) => r.cycle); const row = { p, pos: poCount(a), lines: a.length, usd: sum(a, (r) => r.usd), inv: sum(a, (r) => r.inv), open: a.filter((r) => r.stage === "PO open").length, late: a.filter(isLate).length, vendors: uniq(a, (r) => r.vendor).length, cyc: cy.length ? Math.round(median(cy)) : null }; row.avg = row.usd / (row.pos || 1); cs.forEach((c) => { row[c] = sum(a.filter((r) => r.country === c), (r) => r.usd); }); return row; });
+  rows.forEach((r, i) => { r.chg = i && rows[i - 1].usd ? Math.round(100 * (r.usd - rows[i - 1].usd) / rows[i - 1].usd) : null; });
+  const last = periods[periods.length - 1], lastRows = scoped.filter((r) => keyOf(r) === last), lastByCountry = tally(lastRows, (r) => r.country, (r) => r.usd), lastByCat = topN(tally(lastRows, (r) => r.cat, (r) => r.usd), 7);
+  const cols = [{ label: "Period", get: (r) => r.p }, { label: "POs", num: true, get: (r) => r.pos }, { label: "Lines", num: true, get: (r) => r.lines }, { label: "Value USD (est.)", num: true, get: (r) => Math.round(r.usd), html: (r) => money(r.usd) },
+    { label: "Change", num: true, get: (r) => r.chg, html: (r) => r.chg == null ? "–" : `<span class="pill ${r.chg >= 0 ? "green" : "orange"}">${r.chg >= 0 ? "+" : ""}${r.chg}%</span>` }, { label: "Average PO", num: true, get: (r) => Math.round(r.avg), html: (r) => money(r.avg) },
+    { label: "Invoiced USD", num: true, get: (r) => Math.round(r.inv), html: (r) => money(r.inv) }, { label: "Invoiced %", num: true, get: (r) => r.usd ? Math.round(100 * r.inv / r.usd) : 0, html: (r) => pct(r.inv, r.usd) }, { label: "Open lines", num: true, get: (r) => r.open }, { label: "Past delivery", num: true, get: (r) => r.late },
+    { label: "Vendors", num: true, get: (r) => r.vendors }, { label: "PO → invoice days", num: true, get: (r) => r.cyc, html: (r) => r.cyc ?? "–" }]
+    .concat(cs.map((c) => ({ label: c, num: true, get: (r) => Math.round(r[c]), html: (r) => money(r[c]) })));
+  const word = periodMode === "Yearly" ? "year" : "quarter";
+  return `<div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:16px">
+    <div class="seg" role="tablist" aria-label="Period">${["Yearly", "Quarterly"].map((m) => `<button role="tab" aria-selected="${periodMode === m}" class="${periodMode === m ? "on" : ""}" data-period="${m}">${m}</button>`).join("")}</div>
+    <label style="display:grid;gap:3px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Year<select id="periodYear">${["All"].concat(years).map((y) => `<option${periodYear === y ? " selected" : ""}>${y}</option>`).join("")}</select></label></div>
+  ${!periods.length ? `<div class="loader"><div>No PO lines for these filters.</div></div>` : `
+  <div class="grid">
+    ${panel(`PO value by ${word}`, "USD estimate by creation date, stacked by country. Quarters follow the calendar year (Q1 = Jan–Mar).", chart(stacked(periods, cs.map((c) => [c, rows.map((r) => r[c]), COUNTRY_COLOR[c] || "#7b90a4"]), "PO value by period", true)))}
+    ${panel(`Committed against invoiced by ${word}`, "USD", chart({ type: "bar", aria: "Committed and invoiced by period", data: { labels: periods, datasets: [{ label: "Committed (est.)", data: rows.map((r) => r.usd), backgroundColor: "#9fb3c2", borderRadius: 3 }, { label: "Invoiced", data: rows.map((r) => r.inv), backgroundColor: "#0c3554", borderRadius: 3 }] }, options: { scales: { y: moneyTick }, plugins: { legend: { labels: { boxWidth: 10 } }, tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${money(c.parsed.y)}` } } } } }))}
+    ${panel(`Purchase orders by ${word}`, "Number of purchase orders created", chart({ type: "line", aria: "Purchase orders by period", data: { labels: periods, datasets: [{ label: "Purchase orders", data: rows.map((r) => r.pos), borderColor: "#0e7d8d", backgroundColor: "rgba(14,125,141,.12)", fill: true, tension: .25, pointRadius: 4 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } }))}
+    ${panel(`${last}: share by country`, "Latest period in view", chart(Object.assign(pie(lastByCountry, lastByCountry.map((p) => COUNTRY_COLOR[p[0]] || "#7b90a4"), true), { aria: "Latest period by country" })))}
+    ${panel(`${last}: share by category`, "Latest period in view", chart(Object.assign(pie(lastByCat, PALETTE, true), { aria: "Latest period by category" })))}
+    ${panel(`Average PO value by ${word}`, "USD estimate per purchase order", chart(vbar(rows.map((r) => [r.p, r.avg]), "#0798d4", "Average PO value by period", true)))}
+    ${panel(`${periodMode} summary`, "Rejected and cancelled lines are left out. Change compares each period with the one before.", tableBlock("periods", rows, cols, { search: false, per: 20, file: periodMode.toLowerCase() + "-summary.csv" }), "wide")}
+  </div><p class="note">Only the dates loaded above are included. To compare full years, widen the "Created from" date and press Load data.</p>`}`;
+}
+function suppliersPage() {
+  if (!PO.length) return needData();
+  const d = filtered().filter(isLive);
+  const group = (keyFn) => { const m = new Map(); d.forEach((r) => { const k = keyFn(r) || "Not set"; (m.get(k) || m.set(k, []).get(k)).push(r); }); return [...m.entries()].map(([k, a]) => ({ k, rows: a, pos: poCount(a), lines: a.length, usd: sum(a, (r) => r.usd), inv: sum(a, (r) => r.inv), late: a.filter(isLate).length, countries: uniq(a, (r) => r.country).join(", ") })); };
+  const vendors = group((r) => r.vendor).sort((a, b) => b.usd - a.usd), cats = group((r) => r.cat).sort((a, b) => b.usd - a.usd), buyers = group((r) => r.buyer).sort((a, b) => b.usd - a.usd);
+  const total = sum(d, (r) => r.usd), top5 = sum(vendors.slice(0, 5), (v) => v.usd);
+  let run = 0; const pareto = vendors.slice(0, 20).map((v) => { run += v.usd; return Math.round(100 * run / (total || 1)); });
+  const n80 = (() => { let s = 0, i = 0; while (i < vendors.length && s < 0.8 * total) s += vendors[i++].usd; return i; })();
+  const gcols = (label) => [{ label, get: (r) => r.k, cls: "wrap" }, { label: "POs", num: true, get: (r) => r.pos }, { label: "Lines", num: true, get: (r) => r.lines }, { label: "Value USD (est.)", num: true, get: (r) => Math.round(r.usd), html: (r) => money(r.usd) }, { label: "Share", num: true, get: (r) => r.usd, html: (r) => pct(r.usd, total) },
+    { label: "Average PO", num: true, get: (r) => Math.round(r.usd / (r.pos || 1)), html: (r) => money(r.usd / (r.pos || 1)) }, { label: "Invoiced %", num: true, get: (r) => r.usd ? Math.round(100 * r.inv / r.usd) : 0, html: (r) => pct(r.inv, r.usd) }, { label: "Past delivery", num: true, get: (r) => r.late, html: (r) => r.late ? `<span class="pill red">${r.late}</span>` : "0" }, { label: "Countries", get: (r) => r.countries }];
+  const drill = (label) => (g) => openRowsDetail(poDetail(`${label}: ${g.k}`, g.rows));
+  return `<div class="kpis">
+    ${kpi("Vendors", fmtInt(vendors.length), "With a live PO line", "")}
+    ${kpi("Top 5 vendor share", pct(top5, total), "Share of PO value: concentration check", top5 / (total || 1) > .6 ? "orange" : "")}
+    ${kpi("Vendors for 80% of value", fmtInt(n80), `of ${fmtInt(vendors.length)} vendors`, "navy")}
+    ${kpi("One-PO vendors", fmtInt(vendors.filter((v) => v.pos === 1).length), pct(vendors.filter((v) => v.pos === 1).length, vendors.length) + " of vendors used once", "")}
+    ${kpi("Vendors with late lines", fmtInt(vendors.filter((v) => v.late).length), "At least one open line past delivery", "red")}
+    ${kpi("Categories", fmtInt(cats.length), "Procurement categories used", "")}
+  </div>
+  <div class="grid">
+    ${panel("Top 10 vendors by value", "USD estimate", chart(hbar(vendors.slice(0, 10).map((v) => [v.k, v.usd]), "#0e7d8d", "Top vendors by value")))}
+    ${panel("Vendor concentration", "Cumulative share of PO value across the 20 largest vendors", chart({ type: "line", aria: "Cumulative share of value by vendor rank", data: { labels: pareto.map((_, i) => i + 1), datasets: [{ label: "Cumulative share", data: pareto, borderColor: "#0c3554", backgroundColor: "rgba(12,53,84,.08)", fill: true, tension: .2, pointRadius: 3 }] }, options: { plugins: { legend: { display: false }, tooltip: { callbacks: { title: (c) => "Top " + c[0].label + " vendors", label: (c) => ` ${c.parsed.y}% of PO value` } } }, scales: { y: { min: 0, max: 100, ticks: { callback: (v) => v + "%" } }, x: { title: { display: true, text: "Vendors, largest first" } } } } }))}
+    ${panel("Value by category", "USD estimate, top 10", chart(hbar(cats.slice(0, 10).map((v) => [v.k, v.usd]), "#0798d4", "Value by category")))}
+    ${panel("Value by procurement officer", "USD estimate", chart(Object.assign(pie(buyers.map((b) => [b.k, b.usd]), PALETTE, true), { aria: "Value by procurement officer" })))}
+    ${panel("Vendor register", "Click a vendor to see its PO lines.", tableBlock("vendors", vendors, gcols("Vendor"), { sort: 3, dir: -1, onRow: drill("Vendor"), file: "vendors.csv" }), "wide")}
+    ${panel("Category register", "Click a category to see its PO lines.", tableBlock("cats", cats, gcols("Category"), { sort: 3, dir: -1, onRow: drill("Category"), file: "categories.csv" }), "wide")}
+    ${panel("Procurement officer workload", "Click a name to see their PO lines.", tableBlock("buyers", buyers, gcols("Procurement officer"), { sort: 3, dir: -1, search: false, onRow: drill("Officer"), file: "officers.csv" }), "wide")}
+  </div>`;
+}
+
+/* ============================== Render and events ============================== */
+const TITLES = {
+  overview: ["Procurement Overview", "Purchase orders, value, stage and items needing attention"], orders: ["Purchase Orders", "Every PO line from D365: search, sort, export"],
+  delivery: ["Delivery & Invoicing", "Late deliveries, what is due next and how fast orders are invoiced"],
+  reqs: ["Requisitions", "Purchase requisition status, ageing and conversion to PO"], plan: ["Procurement Plan", "Plan against ICC with a stage timeline and deadline colours"],
+  projects: ["Projects & ICC", "Spend, invoicing and open orders by project and cost centre"],
+  periods: ["Yearly & Quarterly", "Compare procurement by year or by quarter"], suppliers: ["Suppliers & Categories", "Vendor concentration, categories and officer workload"]
+};
+function render() {
+  details = []; pendingCharts = [];
+  const overdue = PLAN.length ? evaluatePlan().filter((p) => p.status === "Overdue").length : 0;
+  $("nav").innerHTML = TABS.map(([id, name, ic]) => `<button data-tab="${id}" class="${tab === id ? "active" : ""}" ${tab === id ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[ic]}</svg><span>${name}</span>${id === "plan" && overdue ? `<span class="count" title="Overdue plan items">${overdue}</span>` : ""}</button>`).join("");
+  $("pageTitle").textContent = TITLES[tab][0]; $("pageSub").textContent = TITLES[tab][1];
+  $("sideFoot").innerHTML = `Data: D365 SSRS reports<br>Today: ${showDate(TODAY)}`;
+  const showFilters = true;
+  $("filters").innerHTML = showFilters ? filterBar(tab === "reqs" ? ["country"] : tab === "plan" ? ["country", "project"] : null) : "";
+  const prevTables = tables; tables = {};
+  Object.keys(prevTables).forEach((k) => { if (k !== "detail") tables[k] = { sort: prevTables[k].sort, dir: prevTables[k].dir, page: prevTables[k].page, q: prevTables[k].q }; });
+  $("content").innerHTML = { overview, orders: ordersPage, delivery: deliveryPage, reqs: reqsPage, plan: planPage, projects: projectsPage, periods: periodsPage, suppliers: suppliersPage }[tab]();
+  Object.keys(tables).forEach((id) => { if (tables[id].rows) drawTable(id); else delete tables[id]; });
+  mountCharts();
+}
+function go(t) { if (!TITLES[t]) t = "overview"; tab = t; if (location.hash.slice(1) !== t) history.replaceState(null, "", "#" + t); tables = {}; render(); window.scrollTo(0, 0); }
+
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-tab],[data-detail],[data-tsort],[data-tpage],[data-trow],[data-texport],[data-period],#clearFilters,#loadPrBtn,#planUpload,#planTemplate,#planClear,#planSample,#retryBtn,#rawCsvBtn");
+  if (!el) return;
+  if (el.dataset.tab) return go(el.dataset.tab);
+  if (el.dataset.detail !== undefined) { const d = details[+el.dataset.detail]; if (d) openRowsDetail(d); return; }
+  if (el.dataset.tsort) { const [id, i] = el.dataset.tsort.split(":"), t = tables[id]; if (t.sort === +i) t.dir = -t.dir; else { t.sort = +i; t.dir = 1; } t.page = 1; return drawTable(id); }
+  if (el.dataset.tpage) { const [id, n] = el.dataset.tpage.split(":"); tables[id].page += +n; return drawTable(id); }
+  if (el.dataset.trow) { const [id, i] = el.dataset.trow.split(":"), t = tables[id]; if (t.onRow) t.onRow(t.visible[+i]); return; }
+  if (el.dataset.texport) { const t = tables[el.dataset.texport]; return exportCsv(t.file, tableRows(t), t.cols); }
+  if (el.dataset.period) { periodMode = el.dataset.period; return render(); }
+  if (el.id === "clearFilters") { Object.keys(filters).forEach((k) => (filters[k] = "All")); return render(); }
+  if (el.id === "loadPrBtn") return loadPR();
+  if (el.id === "retryBtn") return loadFromApi();
+  if (el.id === "rawCsvBtn") return downloadBlob("purchase-orders-original-report.csv", new Blob([rawCsv], { type: "text/csv;charset=utf-8" }));
+  if (el.id === "planUpload") return $("planInput").click();
+  if (el.id === "planTemplate") return downloadTemplate();
+  if (el.id === "planSample") return loadSamplePlan();
+  if (el.id === "planClear") { if (confirm("Remove the uploaded plan from this browser?")) { PLAN = []; planSource = ""; store.set("plan", []); store.set("planSource", ""); render(); } }
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.dataset && e.target.dataset.trow) e.target.click(); });
+document.addEventListener("change", (e) => {
+  if (e.target.dataset.filter) { filters[e.target.dataset.filter] = e.target.value; Object.values(tables).forEach((t) => (t.page = 1)); render(); }
+  if (e.target.id === "periodYear") { periodYear = e.target.value; render(); }
+  if (e.target.dataset.prfilter) { prFilters[e.target.dataset.prfilter] = e.target.value; if (tables.reqs) tables.reqs.page = 1; render(); }
+});
+document.addEventListener("input", (e) => { const id = e.target.dataset.tsearch; if (id) { tables[id].q = e.target.value; tables[id].page = 1; drawTable(id); } });
+$("loadBtn").onclick = loadFromApi;
+$("planInput").onchange = (e) => { const f = e.target.files[0]; if (f) uploadPlan(f); e.target.value = ""; };
+$("detailClose").onclick = () => $("detailDialog").close();
+$("detailExport").onclick = () => currentDetail && currentDetail();
+window.addEventListener("hashchange", () => { const t = location.hash.slice(1); if (t !== tab && TITLES[t]) go(t); });
+
+/* ============================== Sign-in and start ==============================
+   The user signs in with their own CIMMYT Windows account. The API checks it against the
+   report server and returns a session token. Only the token is kept, and only for this tab. */
+const TOKEN_KEY = "cimmytProc.session";
+function saveSession(token, expiresAt) { authToken = token; try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token, expiresAt })); } catch { /* storage unavailable: the user signs in again after a reload */ } }
+function clearSession() { authToken = ""; try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* nothing stored */ } }
+function restoreSession() { try { const v = JSON.parse(sessionStorage.getItem(TOKEN_KEY)); if (v && v.token && v.expiresAt > Date.now()) { authToken = v.token; return true; } } catch { /* no usable session */ } clearSession(); return false; }
+
+let started = false;
+function enterApp() {
+  $("passwordOverlay").classList.add("hidden");
+  document.querySelector(".app").classList.remove("hidden");
+  if (started) { loadFromApi(); return; }
+  started = true;
+  // Default range: the last 3 months, kept short because the report server is slow on long ranges.
+  const from = new Date(); from.setDate(1); from.setMonth(from.getMonth() - 3); // day 1 first, so a short month cannot overflow
+  from.setDate(Math.min(new Date().getDate(), new Date(from.getFullYear(), from.getMonth() + 1, 0).getDate()));
+  $("dFrom").value = iso(from);
+  $("dTo").value = "";
+  tab = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+  render();
+  if (typeof Chart === "undefined" || typeof XLSX === "undefined" || typeof Papa === "undefined") { poLoading = false; loadError = "A chart or Excel library could not be loaded from the CDN. Check the internet connection and reload."; render(); return; }
+  loadFromApi();
+}
+function showSignIn(message) {
+  clearSession();
+  prRun++; PO = []; PR = []; rawCsv = ""; prState = "idle"; poLoading = true; // drop the loaded data with the session
+  if ($("detailDialog").open) $("detailDialog").close();
+  document.querySelector(".app").classList.add("hidden");
+  $("passwordOverlay").classList.remove("hidden");
+  $("passwordError").textContent = message || "";
+  $("passwordInput").value = "";
+  ($("usernameInput").value ? $("passwordInput") : $("usernameInput")).focus();
+}
+async function signIn() {
+  const username = $("usernameInput").value.trim(), password = $("passwordInput").value, btn = $("signInBtn"), err = $("passwordError");
+  if (!username || !password) { err.textContent = "Enter your user name and password."; (username ? $("passwordInput") : $("usernameInput")).focus(); return; }
+  btn.disabled = true; btn.textContent = "Signing in…"; err.textContent = "";
+  try {
+    let res;
+    try { res = await fetch(API_BASE + "/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) }); }
+    catch { throw new Error(UNREACHABLE); }
+    let data = {}; try { data = await res.json(); } catch { /* not JSON */ }
+    if (!res.ok || !data.token) throw new Error(data.message || `Sign-in failed (HTTP ${res.status}).`);
+    $("passwordInput").value = "";
+    saveSession(data.token, data.expiresAt);
+    enterApp();
+  } catch (e) { err.textContent = e.message; $("passwordInput").select(); }
+  btn.disabled = false; btn.textContent = "Sign in";
+}
+$("passwordForm").addEventListener("submit", (event) => { event.preventDefault(); signIn(); });
+$("signOutBtn").onclick = () => {
+  const token = authToken;
+  showSignIn("");
+  if (token) fetch(API_BASE + "/api/logout", { method: "POST", headers: { Authorization: "Bearer " + token } }).catch(() => { /* the session also expires by itself */ });
+};
+if (restoreSession()) enterApp();
+</script>
+</body>
+</html>
