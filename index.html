@@ -115,6 +115,21 @@ dialog h2{margin:0 0 4px;color:var(--navy);font-size:19px}
 @media (prefers-reduced-motion:reduce){.spinner{animation-duration:2.4s}}
 .toast{position:fixed;right:20px;bottom:20px;background:#0c3554;color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;max-width:420px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:99}
 .toast.show{opacity:1;transform:none}
+[hidden]{display:none!important}
+.btn.icon{display:inline-flex;align-items:center;padding:7px 9px}
+.btn.icon svg{width:18px;height:18px}
+.btn.link{border:none;background:none;padding:8px 0;color:#0a6f7e;text-decoration:underline}
+.password-actions.split{justify-content:space-between;align-items:center}
+#settingsDialog{width:min(640px,94vw)}
+.set-row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+.up{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px;background:#f9fcfd}
+.up-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.up-file{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12.5px}
+.up-file .name{font-weight:700;color:var(--navy);overflow-wrap:anywhere;flex:1;min-width:140px}
+.up-file select{padding:5px 8px;font-size:12px}
+.up-err{color:#c33842;font-size:12px;font-weight:700;margin-top:8px}
+.up-err:empty{display:none}
 @media (max-width:900px){
   .app{display:block}
   .app.hidden{display:none}
@@ -138,7 +153,7 @@ dialog h2{margin:0 0 4px;color:var(--navy);font-size:19px}
       <input id="usernameInput" class="password-field" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" spellcheck="false" autofocus>
       <label class="login-label" for="passwordInput">Password</label>
       <input id="passwordInput" class="password-field" type="password" placeholder="Password" autocomplete="current-password">
-      <div class="password-actions"><button type="submit" class="btn primary" id="signInBtn">Sign in</button></div>
+      <div class="password-actions split"><button type="button" class="btn link" id="signInSettings">Upload files instead</button><button type="submit" class="btn primary" id="signInBtn">Sign in</button></div>
       <div id="passwordError" class="password-error" role="alert"></div>
     </form>
   </div>
@@ -165,10 +180,12 @@ dialog h2{margin:0 0 4px;color:var(--navy);font-size:19px}
         <div class="sub" id="pageSub"></div>
       </div>
       <div class="tools">
-        <label>Created from<input type="date" id="dFrom"></label>
-        <label>Created to<input type="date" id="dTo"></label>
-        <button class="btn primary" id="loadBtn">Load data</button>
-        <button class="btn" id="signOutBtn">Sign out</button>
+        <label data-api-only>Created from<input type="date" id="dFrom"></label>
+        <label data-api-only>Created to<input type="date" id="dTo"></label>
+        <button class="btn primary" id="loadBtn" data-api-only>Load data</button>
+        <button class="btn primary" id="uploadBtn" data-manual-only hidden>Upload data</button>
+        <button class="btn" id="signOutBtn" data-api-only>Sign out</button>
+        <button class="btn icon" id="settingsBtn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
     </header>
     <div id="filters" class="filters"></div>
@@ -182,7 +199,15 @@ dialog h2{margin:0 0 4px;color:var(--navy);font-size:19px}
   <div id="detailBody"></div>
 </dialog>
 
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+  <div class="panel-head"><div><h2 id="settingsTitle">Settings</h2><div class="sub">Choose where the dashboard reads its data from.</div></div>
+  <button class="btn small" id="settingsClose">Close</button></div>
+  <div id="settingsBody"></div>
+</dialog>
+
 <input id="planInput" type="file" hidden accept=".xlsx,.xls,.csv">
+<input id="poInput" type="file" hidden accept=".csv,.xlsx,.xls">
+<input id="prInput" type="file" hidden multiple accept=".csv,.xlsx,.xls">
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -217,6 +242,7 @@ const cfg = Object.freeze({
   tor: 15, tender: 30, vendor: 60, po: 75, // predicted stage dates: days after the project granted date
   buffer: 15   // days a stage stays orange before it turns red
 });
+let dataMode = store.get("dataMode", "api") === "manual" ? "manual" : "api"; // "api" = read from the procurement API, "manual" = uploaded files
 let PO = [];            // normalised purchase order lines
 let poLoading = true;   // true while purchase orders are being fetched
 let PR = [];            // normalised requisitions
@@ -314,10 +340,12 @@ function stageOf(status, appr) {
 function normaliseLine(r) {
   const t = (k) => String(r[k] ?? "").trim();
   const cc = t("Textbox148"), status = t("StatusName7") || t("StatusName3"), appr = t("DOCSTATENAME3") || t("DOCSTATENAME2");
-  const icc = t("PURCHPROJID7") || t("PURCHPROJID3"), date = parseAnyDate(t("MAINCREATEDDATE3")), lastInv = parseAnyDate(t("LASTINVOICEDATE7"));
+  // Dates are read from the raw cell, so an uploaded Excel file's date cells work as well as the report's text dates.
+  const dt = (...keys) => { for (const k of keys) { const v = parseAnyDate(r[k]); if (v) return v; } return null; };
+  const icc = t("PURCHPROJID7") || t("PURCHPROJID3"), date = dt("MAINCREATEDDATE3"), lastInv = dt("LASTINVOICEDATE7");
   const o = {
     po: t("PURCHID3"), line: num(r.REQUESTOR9), pr: t("purchreqid6") || t("purchreqid2"), cc, country: COUNTRIES[cc],
-    date, reqDel: parseAnyDate(t("MAINDELIVERYDATE7") || t("MAINDELIVERYDATE3")), lastPO: parseAnyDate(t("LASTPODATE2")), lastPack: parseAnyDate(t("LASTPACKSLIP3")), lastInv,
+    date, reqDel: dt("MAINDELIVERYDATE7", "MAINDELIVERYDATE3"), lastPO: dt("LASTPODATE2"), lastPack: dt("LASTPACKSLIP3"), lastInv,
     desc: t("VENDID7"), vendor: t("VENDID3"), cat: t("Textbox346") || t("Textbox63"), catCode: t("Textbox345") || t("Textbox52"), dim: t("BUYER7"),
     icc, project: icc.split(".")[0], qty: num(r.Textbox347), invQty: num(r.Textbox351), unit: t("Textbox348"), price: num(r.Textbox349),
     cur: t("CURRMAIN7") || t("CURRMAIN3"), amtPO: num(r.LINEAMOUNTPO7), amtInv: num(r.LINEAMOUNTINVOICE7), usdInv: num(r.LINEAMOUNTMST7), poTotal: num(r.LINEAMOUNTPO3),
@@ -332,7 +360,11 @@ function ingestPO(csvText) {
   const fields = parsed.meta.fields || [];
   const missing = PO_REQUIRED.filter((f) => !fields.includes(f));
   if (missing.length) throw new Error("The purchase orders report layout changed: column " + missing.join(", ") + " is missing.");
-  const rows = parsed.data.filter((r) => COUNTRIES[String(r.Textbox148 ?? "").trim()]).map(normaliseLine).filter((r) => r.po);
+  ingestPOData(parsed.data, csvText);
+}
+/** Takes report rows as objects keyed by the report's column names (from the API's CSV or an uploaded file). */
+function ingestPOData(data, csvText) {
+  const rows = data.filter((r) => COUNTRIES[String(r.Textbox148 ?? "").trim()]).map(normaliseLine).filter((r) => r.po);
   const byCur = {};
   rows.forEach((r) => { if (r.amtInv > 0 && r.usdInv > 0) (byCur[r.cur] = byCur[r.cur] || []).push(r.amtInv / r.usdInv); });
   dataRates = {};
@@ -355,45 +387,46 @@ async function apiGet(path, params) {
   let res;
   try { res = await fetch(API_BASE + path + (q.toString() ? "?" + q : ""), { headers: { Authorization: "Bearer " + authToken } }); }
   catch { throw new Error(UNREACHABLE); }
-  if (res.status === 401) { showSignIn("Your session has ended. Sign in again."); throw new Error("Sign in to continue."); }
+  if (res.status === 401) { if (dataMode === "api") showSignIn("Your session has ended. Sign in again."); throw new Error("Sign in to continue."); }
   if (!res.ok) { let d = {}; try { d = await res.json(); } catch { /* not JSON */ } throw new Error((d.field ? `Check the ${d.field} filter: ` : "") + (d.message || `The API returned HTTP ${res.status}.`)); }
   return res;
 }
+let poRun = 0; // bumped by every load and by a data source switch, so a stale answer is dropped
 async function loadFromApi() {
+  if (dataMode !== "api") return;
   const from = $("dFrom").value, to = $("dTo").value;
   if (from && to && from > to) { toast("The start date must be on or before the end date."); return; }
   const btn = $("loadBtn"); btn.disabled = true; btn.textContent = "Loading…";
   poLoading = true; loadError = ""; PO = []; PR = []; prState = "idle"; render();
-  const token = authToken;
+  const token = authToken, run = ++poRun;
+  const current = () => token === authToken && run === poRun; // false after a sign-out, a newer load or a switch to manual upload
   try {
     const csv = await (await apiGet("/api/purchase-orders/csv", { CreatedStartDate: from, CreatedEndDate: to })).text();
-    if (token !== authToken) return; // signed out while loading: discard the result
+    if (!current()) return;
     ingestPO(csv);
     poLoading = false; render();
     loadPR(); // requisitions follow in the background
-  } catch (e) { if (token === authToken) { poLoading = false; loadError = e.message; render(); } }
-  finally { btn.disabled = false; btn.textContent = "Load data"; }
+  } catch (e) { if (current()) { poLoading = false; loadError = e.message; render(); } }
+  finally { if (run === poRun) { btn.disabled = false; btn.textContent = "Load data"; } }
 }
 
 /* ============================== Requisitions ============================== */
-async function loadPR() {
-  const run = ++prRun;
-  prState = "loading"; if (tab === "reqs") render();
-  const from = $("dFrom").value, to = $("dTo").value;
-  const results = await Promise.allSettled(Object.keys(COUNTRIES).map(async (cc) => {
-    const text = await (await apiGet("/api/purchase-requisitions", { CreatedStartDate: from, CreatedEndDate: to, Country: cc })).text();
-    const parsed = Papa.parse(text.replace(/^﻿/, ""), { header: true, skipEmptyLines: true });
-    return parsed.data.map((r) => ({
-      id: (r.textbox37 || "").trim(), country: COUNTRIES[cc], created: parseAnyDate(r.textbox36), submitted: parseAnyDate(r.Textbox16),
-      requester: (r.textbox26 || "").trim(), status: (r.docstatus || "").trim() || "Not set", po: (r.Textbox760 || "").trim(), poDate: parseAnyDate(r.textbox40),
-      poStatus: (r.textbox38 || "").trim(), just: (r.BUSJUS || "").trim(), desc: (r.textbox39 || "").trim(), program: (r.ordererpogram || "").trim(), days: num(r.Textbox21)
-    })).filter((r) => r.id);
-  }));
-  if (run !== prRun) return; // a newer load started meanwhile
-  const ok = results.filter((r) => r.status === "fulfilled");
-  if (!ok.length) { prState = "error"; prError = results[0].reason.message; if (tab === "reqs" || tab === "overview") render(); return; }
+// Countries whose requisition report may not exist yet. The report server answers these with an
+// error until it has data; that is not a failure. They are asked for on every load, so their
+// requisitions appear by themselves once the report server has them.
+const PR_OPTIONAL = new Set(["CTUR"]);
+function mapPR(r, country) {
+  const t = (k) => String(r[k] ?? "").trim();
+  return {
+    id: t("textbox37"), country, created: parseAnyDate(r.textbox36), submitted: parseAnyDate(r.Textbox16),
+    requester: t("textbox26"), status: t("docstatus") || "Not set", po: t("Textbox760"), poDate: parseAnyDate(r.textbox40),
+    poStatus: t("textbox38"), just: t("BUSJUS"), desc: t("textbox39"), program: t("ordererpogram"), days: num(r.Textbox21)
+  };
+}
+/** Removes repeats, links each requisition to its purchase order and works out open, age and lead. */
+function finishPR(list) {
   const seen = new Set();
-  PR = ok.flatMap((r) => r.value).filter((r) => { const k = r.id + "|" + r.po; if (seen.has(k)) return false; seen.add(k); return true; });
+  PR = list.filter((r) => { const k = r.id + "|" + r.po; if (seen.has(k)) return false; seen.add(k); return true; });
   const poByPr = new Map();
   PO.forEach((r) => { if (r.pr && r.date && (!poByPr.has(r.pr) || r.date < poByPr.get(r.pr).date)) poByPr.set(r.pr, r); });
   PR.forEach((r) => {
@@ -404,9 +437,155 @@ async function loadPR() {
     r.lead = r.po && r.created && r.poDate ? Math.max(0, diffDays(r.created, r.poDate)) : null;
   });
   prState = "ready";
-  const failed = results.length - ok.length;
-  if (failed) toast(`Requisitions: ${failed} of ${results.length} country requests failed; showing the rest.`);
+}
+async function loadPR() {
+  if (dataMode !== "api") return;
+  const run = ++prRun;
+  prState = "loading"; if (tab === "reqs") render();
+  const from = $("dFrom").value, to = $("dTo").value;
+  const codes = Object.keys(COUNTRIES);
+  const results = await Promise.allSettled(codes.map(async (cc) => {
+    const text = await (await apiGet("/api/purchase-requisitions", { CreatedStartDate: from, CreatedEndDate: to, Country: cc })).text();
+    const parsed = Papa.parse(text.replace(/^﻿/, ""), { header: true, skipEmptyLines: true });
+    return parsed.data.map((r) => mapPR(r, COUNTRIES[cc])).filter((r) => r.id);
+  }));
+  if (run !== prRun) return; // a newer load started meanwhile
+  const ok = results.filter((r) => r.status === "fulfilled");
+  const failed = codes.filter((cc, i) => results[i].status === "rejected" && !PR_OPTIONAL.has(cc)); // a missing optional country is ignored
+  if (!ok.length) { prState = "error"; prError = (results.find((r, i) => !PR_OPTIONAL.has(codes[i])) || results[0]).reason.message; if (tab === "reqs" || tab === "overview") render(); return; }
+  finishPR(ok.flatMap((r) => r.value));
+  if (failed.length) toast(`Requisitions could not be loaded for ${failed.map((cc) => COUNTRIES[cc]).join(", ")}; showing the rest.`);
   if (tab === "reqs" || tab === "overview") render();
+}
+
+/* ============================== Settings and manual upload ==============================
+   Settings chooses the data source. "Read from API" is the live path above. "Manual upload"
+   reads the same two D365 reports from files the user exported (CSV or Excel); nothing is
+   sent anywhere and no sign-in is needed. Uploaded files live in this tab's memory only. */
+const PR_REQUIRED = ["textbox37"];
+// Column names the dashboard reads. An uploaded heading that differs only in letter case is matched to these.
+const KNOWN_COLS = ["Textbox148", "StatusName7", "StatusName3", "DOCSTATENAME3", "DOCSTATENAME2", "PURCHPROJID7", "PURCHPROJID3", "MAINCREATEDDATE3", "LASTINVOICEDATE7",
+  "PURCHID3", "REQUESTOR9", "purchreqid6", "purchreqid2", "MAINDELIVERYDATE7", "MAINDELIVERYDATE3", "LASTPODATE2", "LASTPACKSLIP3", "VENDID7", "VENDID3", "Textbox346", "Textbox63",
+  "Textbox345", "Textbox52", "BUYER7", "Textbox347", "Textbox351", "Textbox348", "Textbox349", "CURRMAIN7", "CURRMAIN3", "LINEAMOUNTPO7", "LINEAMOUNTINVOICE7", "LINEAMOUNTMST7",
+  "LINEAMOUNTPO3", "BUYER3", "ORDERERNAME3", "ORDERERNAME2", "REQUESTOR8", "REQUESTOR3", "ASSETID7", "CAPEXCODE7",
+  "textbox37", "textbox36", "Textbox16", "textbox26", "docstatus", "Textbox760", "textbox40", "textbox38", "BUSJUS", "textbox39", "ordererpogram", "Textbox21", "Textbox28", "Country"];
+const CANON = new Map(KNOWN_COLS.map((c) => [c.toLowerCase(), c]));
+const manual = { po: null, pr: [] }; // po: { name, rows, csv }   pr: [{ name, rows, count, country }]
+const manualMsg = { po: "", pr: "" };  // last upload problem per report, shown in Settings
+
+function decodeText(buf) {
+  const b = new Uint8Array(buf.slice(0, 2));
+  const enc = b[0] === 0xff && b[1] === 0xfe ? "utf-16le" : b[0] === 0xfe && b[1] === 0xff ? "utf-16be" : "utf-8";
+  return new TextDecoder(enc).decode(buf).replace(/^﻿/, "");
+}
+/** Finds the heading row (it need not be the first row) and returns the rows below it as objects. */
+function tableFromGrid(grid, required) {
+  const want = required.map((c) => c.toLowerCase());
+  const at = grid.slice(0, 50).findIndex((row) => { const h = row.map((c) => String(c ?? "").trim().toLowerCase()); return want.every((w) => h.includes(w)); });
+  if (at < 0) return null;
+  const head = grid[at].map((c) => { const s = String(c ?? "").trim(); return CANON.get(s.toLowerCase()) || s; });
+  const rows = grid.slice(at + 1).filter((row) => row.some((c) => String(c ?? "").trim() !== "")).map((row) => {
+    const o = {};
+    head.forEach((h, i) => { if (h && !(h in o)) o[h] = row[i] ?? ""; }); // a repeated heading keeps its first column
+    return o;
+  });
+  return { rows };
+}
+/** Reads a CSV or Excel file into report rows. Excel dates stay serial numbers, which parseAnyDate() reads exactly. */
+async function readDataFile(file, required, label) {
+  const buf = await file.arrayBuffer();
+  let sheets;
+  if (/\.(xlsx|xlsm|xls)$/i.test(file.name)) {
+    const wb = XLSX.read(buf, { type: "array" });
+    sheets = wb.SheetNames.map((n) => ({ grid: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: "", raw: true }), csv: () => XLSX.utils.sheet_to_csv(wb.Sheets[n]) }));
+  } else {
+    const text = decodeText(buf);
+    sheets = [{ grid: Papa.parse(text, { skipEmptyLines: true }).data, csv: () => text }];
+  }
+  for (const s of sheets) { const t = tableFromGrid(s.grid, required); if (t) return { rows: t.rows, csv: s.csv() }; }
+  throw new Error(`${file.name} does not look like the ${label} report: no heading row with the column${required.length > 1 ? "s" : ""} ${required.join(", ")} was found.`);
+}
+const countryName = (v) => { const s = String(v ?? "").trim(); return COUNTRIES[s.toUpperCase()] || Object.values(COUNTRIES).find((n) => n.toLowerCase() === s.toLowerCase()) || ""; };
+const guessCountry = (fileName) => { const hit = Object.entries(COUNTRIES).find(([cc, name]) => new RegExp(cc + "|" + name, "i").test(fileName)); return hit ? hit[1] : "auto"; };
+
+/** Rebuilds the dashboard data from the uploaded files. */
+function applyManual() {
+  if (dataMode !== "manual") return;
+  poRun++; prRun++; // drop any API answer still on its way
+  PO = []; PR = []; rawCsv = ""; dataRates = {}; prState = "idle"; poLoading = false; loadError = "";
+  if (manual.po) ingestPOData(manual.po.rows, manual.po.csv);
+  if (manual.pr.length) {
+    // Country of a requisition: the one chosen for the file, else the report's country code column
+    // (Textbox28, e.g. CIND), else a "Country" column, else the country of the linked purchase order.
+    const byPr = new Map(), byPo = new Map();
+    PO.forEach((r) => { if (!r.country) return; if (r.pr && !byPr.has(r.pr)) byPr.set(r.pr, r.country); if (!byPo.has(r.po)) byPo.set(r.po, r.country); });
+    finishPR(manual.pr.flatMap((f) => f.rows.map((r) => {
+      const o = mapPR(r, f.country === "auto" ? countryName(r.Textbox28) || countryName(r.Country) : f.country);
+      if (!o.country) o.country = byPr.get(o.id) || byPo.get(o.po) || "Not set";
+      return o;
+    })).filter((o) => o.id));
+  }
+  render();
+}
+async function pickPO(file) {
+  manualMsg.po = "";
+  try {
+    const t = await readDataFile(file, PO_REQUIRED, "purchase orders");
+    if (!t.rows.some((r) => COUNTRIES[String(r.Textbox148 ?? "").trim()] && String(r.PURCHID3 ?? "").trim())) throw new Error(`${file.name} has no purchase order lines for ${Object.values(COUNTRIES).join(", ")}.`);
+    manual.po = { name: file.name, rows: t.rows, csv: t.csv };
+  } catch (e) { manualMsg.po = e.message; }
+  applyManual(); drawSettings();
+}
+async function pickPR(files) {
+  const errors = [];
+  for (const file of files) {
+    try {
+      const t = await readDataFile(file, PR_REQUIRED, "purchase requisitions");
+      const count = t.rows.filter((r) => String(r.textbox37 ?? "").trim()).length;
+      if (!count) throw new Error(`${file.name} has no requisition rows.`);
+      manual.pr = manual.pr.filter((f) => f.name !== file.name).concat({ name: file.name, rows: t.rows, count, country: guessCountry(file.name) }); // the same file name replaces the earlier upload
+    } catch (e) { errors.push(e.message); }
+  }
+  manualMsg.pr = errors.join(" ");
+  applyManual(); drawSettings();
+}
+function drawSettings() {
+  const seg = `<div class="seg" role="group" aria-label="Data source">${[["api", "Read from API"], ["manual", "Manual upload"]].map(([m, l]) => `<button type="button" data-mode="${m}" class="${dataMode === m ? "on" : ""}" aria-pressed="${dataMode === m}">${l}</button>`).join("")}</div>`;
+  let body = `<div class="set-row"><b>Data source</b>${seg}</div>`;
+  if (dataMode === "api") {
+    body += `<p class="note">The dashboard signs in to the procurement API at ${esc(cfg.api)} and reads the D365 reports live. Switch to manual upload when the API or the report server is slow or cannot be reached.</p>`;
+  } else {
+    const countryPick = (f, i) => `<select data-prcountry="${i}" aria-label="Country for ${esc(f.name)}"><option value="auto">Detect country</option>${Object.values(COUNTRIES).map((n) => `<option ${f.country === n ? "selected" : ""}>${n}</option>`).join("")}</select>`;
+    body += `<p class="note">Upload the two D365 reports exported as CSV or Excel (.xlsx, .xls), with the column headings the report produces. The files are read in this browser only and are not sent anywhere. Upload them again after the page is reloaded.</p>
+    <div class="up"><div class="up-head"><b>Purchase orders</b><button type="button" class="btn small" id="poPick">${manual.po ? "Replace file" : "Choose file"}</button></div>
+      ${manual.po ? `<div class="up-file"><span class="name">${esc(manual.po.name)}</span><span>${fmtInt(PO.length)} lines · ${fmtInt(new Set(PO.map((r) => r.po)).size)} purchase orders</span><button type="button" class="btn small" id="poRemove">Remove</button></div>`
+        : `<div class="sub" style="margin-top:6px">No file yet. One file: the purchase orders report (CO_PurchaseOrders.Detail).</div>`}
+      <div class="up-err" role="alert">${esc(manualMsg.po)}</div></div>
+    <div class="up"><div class="up-head"><b>Purchase requisitions</b><button type="button" class="btn small" id="prPick">Add files</button></div>
+      ${manual.pr.length ? manual.pr.map((f, i) => `<div class="up-file"><span class="name">${esc(f.name)}</span><span>${fmtInt(f.count)} requisition${f.count === 1 ? "" : "s"}</span>${countryPick(f, i)}<button type="button" class="btn small" data-prremove="${i}">Remove</button></div>`).join("")
+        : `<div class="sub" style="margin-top:6px">No file yet. One file for every country, or one file per country (CO_PurchaseReqSummary.PurchReq).</div>`}
+      <div class="up-err" role="alert">${esc(manualMsg.pr)}</div>
+      <div class="note">"Detect country" reads the country code column of the report, or else the linked purchase order. Choose a country only for a file that has neither.</div></div>`;
+  }
+  $("settingsBody").innerHTML = body;
+}
+function openSettings() { drawSettings(); if (!$("settingsDialog").open) $("settingsDialog").showModal(); }
+/** Shows the header controls that belong to the current data source. */
+function applyMode() {
+  const manualOn = dataMode === "manual";
+  document.querySelectorAll("[data-api-only]").forEach((el) => { el.hidden = manualOn; });
+  document.querySelectorAll("[data-manual-only]").forEach((el) => { el.hidden = !manualOn; });
+}
+function setMode(mode) {
+  if (mode === dataMode || (mode !== "api" && mode !== "manual")) return;
+  dataMode = mode; store.set("dataMode", mode);
+  poRun++; prRun++;
+  PO = []; PR = []; rawCsv = ""; prState = "idle"; loadError = "";
+  const btn = $("loadBtn"); btn.disabled = false; btn.textContent = "Load data";
+  if (mode === "manual") { poLoading = false; enterApp(); } // the API sign-in, if any, is kept for switching back
+  else { poLoading = true; applyMode(); if (restoreSession()) enterApp(); else showSignIn(""); }
+  drawSettings();
+  const on = document.querySelector("#settingsBody [data-mode].on"); if (on) on.focus();
 }
 
 /* ============================== Procurement plan ============================== */
@@ -655,6 +834,7 @@ const poHeadDetail = (title, groups, note) => ({ title, rows: groups, cols: PO_H
 /* ============================== Pages ============================== */
 function needData() {
   if (poLoading) return `<div class="loader" role="status"><div class="spinner" aria-hidden="true"></div><div>Please wait…</div></div>`;
+  if (dataMode === "manual") return `<div class="loader" role="status"><div style="max-width:560px;text-align:center">${esc(loadError || "Manual upload is on. Upload the purchase orders file to see this page.")}</div><button class="btn primary" id="openSettingsBtn">Upload data</button></div>`;
   return `<div class="loader" role="status"><div style="max-width:560px;text-align:center">${esc(loadError || "No data loaded.")}</div><button class="btn primary" id="retryBtn">Try again</button></div>`;
 }
 function monthSeries(rows) {
@@ -800,6 +980,7 @@ function projectsPage() {
   </div>`;
 }
 function reqsPage() {
+  if (dataMode === "manual" && prState === "idle") return `<div class="loader" role="status"><div style="max-width:560px;text-align:center">No requisitions file has been uploaded yet.</div><button class="btn primary" id="openSettingsBtn">Upload data</button></div>`;
   if (!PO.length && prState === "idle") return needData();
   if (prState === "idle" || prState === "loading") return `<div class="loader" role="status"><div class="spinner" aria-hidden="true"></div><div>Please wait…</div></div>`;
   if (prState === "error") return `<div class="loader" role="status"><div style="max-width:560px;text-align:center">${esc(prError)}</div><button class="btn primary" id="loadPrBtn">Try again</button></div>`;
@@ -950,7 +1131,7 @@ function render() {
   const overdue = PLAN.length ? evaluatePlan().filter((p) => p.status === "Overdue").length : 0;
   $("nav").innerHTML = TABS.map(([id, name, ic]) => `<button data-tab="${id}" class="${tab === id ? "active" : ""}" ${tab === id ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[ic]}</svg><span>${name}</span>${id === "plan" && overdue ? `<span class="count" title="Overdue plan items">${overdue}</span>` : ""}</button>`).join("");
   $("pageTitle").textContent = TITLES[tab][0]; $("pageSub").textContent = TITLES[tab][1];
-  $("sideFoot").innerHTML = `Data: D365 SSRS reports<br>Today: ${showDate(TODAY)}`;
+  $("sideFoot").innerHTML = `Data: ${dataMode === "manual" ? "uploaded D365 report files" : "D365 SSRS reports"}<br>Today: ${showDate(TODAY)}`;
   const showFilters = true;
   $("filters").innerHTML = showFilters ? filterBar(tab === "reqs" ? ["country"] : tab === "plan" ? ["country", "project"] : null) : "";
   const prevTables = tables; tables = {};
@@ -962,8 +1143,16 @@ function render() {
 function go(t) { if (!TITLES[t]) t = "overview"; tab = t; if (location.hash.slice(1) !== t) history.replaceState(null, "", "#" + t); tables = {}; render(); window.scrollTo(0, 0); }
 
 document.addEventListener("click", (e) => {
-  const el = e.target.closest("[data-tab],[data-detail],[data-tsort],[data-tpage],[data-trow],[data-texport],[data-period],#clearFilters,#loadPrBtn,#planUpload,#planTemplate,#planClear,#planSample,#retryBtn,#rawCsvBtn");
+  const el = e.target.closest("[data-tab],[data-detail],[data-tsort],[data-tpage],[data-trow],[data-texport],[data-period],#clearFilters,#loadPrBtn,#planUpload,#planTemplate,#planClear,#planSample,#retryBtn,#rawCsvBtn,[data-mode],[data-prremove],#settingsBtn,#uploadBtn,#openSettingsBtn,#signInSettings,#settingsClose,#poPick,#prPick,#poRemove");
   if (!el) return;
+  if (el.dataset.mode) return setMode(el.dataset.mode);
+  if (el.dataset.prremove !== undefined) { manual.pr.splice(+el.dataset.prremove, 1); manualMsg.pr = ""; applyManual(); return drawSettings(); }
+  if (el.id === "settingsBtn" || el.id === "uploadBtn" || el.id === "openSettingsBtn") return openSettings();
+  if (el.id === "signInSettings") { setMode("manual"); return openSettings(); }
+  if (el.id === "settingsClose") return $("settingsDialog").close();
+  if (el.id === "poPick") return $("poInput").click();
+  if (el.id === "prPick") return $("prInput").click();
+  if (el.id === "poRemove") { manual.po = null; manualMsg.po = ""; applyManual(); return drawSettings(); }
   if (el.dataset.tab) return go(el.dataset.tab);
   if (el.dataset.detail !== undefined) { const d = details[+el.dataset.detail]; if (d) openRowsDetail(d); return; }
   if (el.dataset.tsort) { const [id, i] = el.dataset.tsort.split(":"), t = tables[id]; if (t.sort === +i) t.dir = -t.dir; else { t.sort = +i; t.dir = 1; } t.page = 1; return drawTable(id); }
@@ -984,11 +1173,14 @@ document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.
 document.addEventListener("change", (e) => {
   if (e.target.dataset.filter) { filters[e.target.dataset.filter] = e.target.value; Object.values(tables).forEach((t) => (t.page = 1)); render(); }
   if (e.target.id === "periodYear") { periodYear = e.target.value; render(); }
+  if (e.target.dataset.prcountry !== undefined) { const f = manual.pr[+e.target.dataset.prcountry]; if (f) { f.country = e.target.value; applyManual(); } }
   if (e.target.dataset.prfilter) { prFilters[e.target.dataset.prfilter] = e.target.value; if (tables.reqs) tables.reqs.page = 1; render(); }
 });
 document.addEventListener("input", (e) => { const id = e.target.dataset.tsearch; if (id) { tables[id].q = e.target.value; tables[id].page = 1; drawTable(id); } });
 $("loadBtn").onclick = loadFromApi;
 $("planInput").onchange = (e) => { const f = e.target.files[0]; if (f) uploadPlan(f); e.target.value = ""; };
+$("poInput").onchange = (e) => { const f = e.target.files[0]; if (f) pickPO(f); e.target.value = ""; };
+$("prInput").onchange = (e) => { const fs = [...e.target.files]; if (fs.length) pickPR(fs); e.target.value = ""; };
 $("detailClose").onclick = () => $("detailDialog").close();
 $("detailExport").onclick = () => currentDetail && currentDetail();
 window.addEventListener("hashchange", () => { const t = location.hash.slice(1); if (t !== tab && TITLES[t]) go(t); });
@@ -1005,17 +1197,18 @@ let started = false;
 function enterApp() {
   $("passwordOverlay").classList.add("hidden");
   document.querySelector(".app").classList.remove("hidden");
-  if (started) { loadFromApi(); return; }
-  started = true;
-  // Default range: the last 3 months, kept short because the report server is slow on long ranges.
-  const from = new Date(); from.setDate(1); from.setMonth(from.getMonth() - 3); // day 1 first, so a short month cannot overflow
-  from.setDate(Math.min(new Date().getDate(), new Date(from.getFullYear(), from.getMonth() + 1, 0).getDate()));
-  $("dFrom").value = iso(from);
-  $("dTo").value = "";
-  tab = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
-  render();
+  applyMode();
+  if (!started) {
+    started = true;
+    // Default range: the last 3 months, kept short because the report server is slow on long ranges.
+    const from = new Date(); from.setDate(1); from.setMonth(from.getMonth() - 3); // day 1 first, so a short month cannot overflow
+    from.setDate(Math.min(new Date().getDate(), new Date(from.getFullYear(), from.getMonth() + 1, 0).getDate()));
+    $("dFrom").value = iso(from);
+    $("dTo").value = "";
+    tab = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+  }
   if (typeof Chart === "undefined" || typeof XLSX === "undefined" || typeof Papa === "undefined") { poLoading = false; loadError = "A chart or Excel library could not be loaded from the CDN. Check the internet connection and reload."; render(); return; }
-  loadFromApi();
+  if (dataMode === "manual") applyManual(); else loadFromApi();
 }
 function showSignIn(message) {
   clearSession();
@@ -1049,7 +1242,7 @@ $("signOutBtn").onclick = () => {
   showSignIn("");
   if (token) fetch(API_BASE + "/api/logout", { method: "POST", headers: { Authorization: "Bearer " + token } }).catch(() => { /* the session also expires by itself */ });
 };
-if (restoreSession()) enterApp();
+if (dataMode === "manual" || restoreSession()) enterApp(); // manual upload needs no sign-in
 </script>
 </body>
 </html>
