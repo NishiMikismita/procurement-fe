@@ -144,7 +144,19 @@ dialog h2{margin:0 0 4px;color:var(--navy);font-size:19px}
 </style>
 </head>
 <body>
-<div id="passwordOverlay" class="password-overlay" aria-live="polite">
+<div id="accessOverlay" class="password-overlay" aria-live="polite">
+  <div class="password-modal">
+    <div class="eyebrow">Restricted access</div>
+    <h2>Enter access password</h2>
+    <form id="accessForm" novalidate>
+      <label class="login-label" for="accessPasswordInput">Password</label>
+      <input id="accessPasswordInput" class="password-field" type="password" placeholder="Access password" autocomplete="current-password" autofocus>
+      <div class="password-actions"><button type="submit" class="btn primary">Continue</button></div>
+      <div id="accessError" class="password-error" role="alert"></div>
+    </form>
+  </div>
+</div>
+<div id="passwordOverlay" class="password-overlay hidden" aria-live="polite">
   <div class="password-modal">
     <div class="eyebrow">CIMMYT account</div>
     <h2>Sign in</h2>
@@ -1189,9 +1201,28 @@ window.addEventListener("hashchange", () => { const t = location.hash.slice(1); 
    The user signs in with their own CIMMYT Windows account. The API checks it against the
    report server and returns a session token. Only the token is kept, and only for this tab. */
 const TOKEN_KEY = "cimmytProc.session";
+const ACCESS_PASSWORD = "Nish2026";
 function saveSession(token, expiresAt) { authToken = token; try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token, expiresAt })); } catch { /* storage unavailable: the user signs in again after a reload */ } }
 function clearSession() { authToken = ""; try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* nothing stored */ } }
 function restoreSession() { try { const v = JSON.parse(sessionStorage.getItem(TOKEN_KEY)); if (v && v.token && v.expiresAt > Date.now()) { authToken = v.token; return true; } } catch { /* no usable session */ } clearSession(); return false; }
+
+function startAfterAccessCheck() {
+  if (dataMode === "manual" || restoreSession()) enterApp();
+  else showSignIn("");
+}
+$("accessForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = $("accessPasswordInput");
+  if (input.value !== ACCESS_PASSWORD) {
+    $("accessError").textContent = "Incorrect access password.";
+    input.value = "";
+    input.focus();
+    return;
+  }
+  $("accessError").textContent = "";
+  $("accessOverlay").classList.add("hidden");
+  startAfterAccessCheck();
+});
 
 let started = false;
 function enterApp() {
@@ -1242,7 +1273,6 @@ $("signOutBtn").onclick = () => {
   showSignIn("");
   if (token) fetch(API_BASE + "/api/logout", { method: "POST", headers: { Authorization: "Bearer " + token } }).catch(() => { /* the session also expires by itself */ });
 };
-if (dataMode === "manual" || restoreSession()) enterApp(); // manual upload needs no sign-in
 </script>
 </body>
 </html>
